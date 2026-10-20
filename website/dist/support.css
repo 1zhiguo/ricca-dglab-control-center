@@ -1,0 +1,20 @@
+.header nav>a.github-link{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 11px;border:1px solid var(--line);border-radius:999px;color:var(--text);flex-shrink:0}
+.github-link svg{display:block;width:15px;height:15px;flex-shrink:0}
+.header nav>a.github-link:hover{background:#171e2a;border-color:#52627a}
+.social-profile-card{position:relative;display:grid;grid-template-columns:104px minmax(0,1fr) auto;align-items:center;gap:24px;margin:0 0 20px;padding:24px;overflow:hidden;border:1px solid #394158;border-radius:16px;background:linear-gradient(115deg,#ff6fae1f,#121722f5 42%,#62abff17);box-shadow:0 20px 50px #0003}
+.social-profile-card:after{content:"";position:absolute;top:-110px;right:-80px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,#ff6fae29,transparent 68%);pointer-events:none}
+.social-avatar{position:relative;z-index:1;display:block;width:104px;height:104px;border:2px solid #ffffffb8;border-radius:50%;object-fit:cover;object-position:50% 36%;background:#e7cdd4;box-shadow:0 12px 34px #0005}
+.social-profile-copy{position:relative;z-index:1;min-width:0}
+.social-kicker{display:block;margin-bottom:7px;color:var(--pink);font-size:11px;font-weight:800;letter-spacing:.14em}
+.social-profile-copy h3{margin:0 0 7px;font-size:21px}
+.social-profile-copy p{margin:0 0 9px;color:var(--muted);font-size:13px;line-height:1.6}
+.social-profile-copy strong{color:#fff;font-size:14px;letter-spacing:.02em}
+.social-follow-button{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid #ffffff24;border-radius:11px;background:#f5f7fb;color:#0b0d12;font-size:13px;font-weight:800;white-space:nowrap;transition:transform .18s,box-shadow .18s}
+.social-follow-button span{font-size:17px}.social-follow-button b{font-size:13px}
+.social-follow-button:hover{transform:translateY(-2px);box-shadow:0 12px 30px #ff6fae33}
+.support-grid{display:grid;grid-template-columns:repeat(2,minmax(0,420px));gap:20px}
+.support-grid article{padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.support-grid img{display:block;width:100%;aspect-ratio:1;object-fit:contain;border-radius:8px;background:#0b0d12}
+.support-grid h3{margin:18px 0 6px;font-size:17px}.support-grid p{margin:0;color:var(--muted);font-size:13px;line-height:1.7}
+@media(max-width:760px){.github-link span{display:none}.header nav>a.github-link{width:34px;padding:0;margin-right:8px}.header nav{flex-wrap:nowrap!important}}
+@media(max-width:720px){.social-profile-card{grid-template-columns:76px minmax(0,1fr);gap:16px;padding:18px}.social-avatar{width:76px;height:76px}.social-profile-copy h3{font-size:18px}.social-follow-button{grid-column:1/-1;width:100%;margin-top:2px}.support-grid{grid-template-columns:1fr}}

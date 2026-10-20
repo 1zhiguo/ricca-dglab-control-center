@@ -38,6 +38,14 @@ class Page(HTMLParser):
 pages = {p.name: Page(p) for p in DIST.glob("*.html")}
 assert set(pages) == {"index.html", "guide.html"}
 for name, page in pages.items():
+    markup = page.path.read_text(encoding="utf-8")
+    header = markup[markup.index("<header"):markup.index("</header>")]
+    assert 'class="header-top"' in header and 'class="header-bottom"' in header
+    assert header.index('class="dashboard-back"') < header.index('class="header-tools"') < header.index('class="header-bottom"')
+    assert 'product-header.css?v=20261021.1' in markup
+    nav = header[header.index("<nav"):header.index("</nav>")]
+    assert 'class="github-link"' not in nav and 'class="language"' not in nav
+    assert 'https://dglab-x-game.web.app/' in header
     assert page.h1 == 1, (name, "expected one h1")
     assert page.languages == {"zh", "en", "ja"}, (name, "language selector")
     for reference in page.refs:
@@ -64,8 +72,14 @@ for excluded in ("settings.json", "GameAssembly.dll", "HolyKnightRicca.exe", "Ri
     assert not list(DIST.rglob(excluded)), ("non-website file", excluded)
 assert not list(DIST.rglob("*.jsonl")), "Telemetry must not be included in website assets"
 home = (DIST / "index.html").read_text(encoding="utf-8")
-order = [home.index(f'id="{name}"') for name in ("top", "features", "downloads", "screens", "support", "credits")]
+order = [home.index(f'id="{name}"') for name in ("top", "features", "downloads", "screens", "support")]
 assert order == sorted(order), "Keep the Manaka reference's product/features/downloads/screens/support order"
+assert 'id="credits"' not in home and 'href="#credits"' not in home
+assert "172 项自动测试" not in home and 'class="release-notice"' not in home
+assert 'data-en="GPL-3.0 Source ↗"' not in home
+assert 'class="github-link"' in home and 'class="support-grid"' in home
+for support_asset in ('x-avatar.png','qq-group.jpg','reward-code.jpg'):
+    assert (DIST/'assets'/support_asset).stat().st_size > 1000
 assert home.count("data-screenshot") == 6
 assert 'aria-controls="download-sources"' in home and 'id="download-sources" hidden' in home
 assert 'aria-controls="quick-start"' in home and 'id="quick-start"' in home

@@ -32,6 +32,9 @@
   const originalDescription=description?.content;
   const imageDescriptions=new Map([...document.querySelectorAll('img[alt]')].map(node=>[node,node.alt]));
   const altCopies={
+    "Guoguo's X avatar":['果果的 X 头像',"Guoguo's X avatar",'果果の X アバター'],
+    'QQ community QR code':['QQ群二维码','QQ community QR code','QQ 交流グループの QR コード'],
+    "Guoguo's reward code":['果果的赞赏码',"Guoguo's reward code",'果果の応援用 QR コード'],
     'DG-LAB 图标':['DG-LAB 图标','DG-LAB icon','DG-LAB アイコン'],
     'Ricca 插件图标':['Ricca 插件图标','Ricca app icon','Ricca アプリアイコン'],
     'Ricca overview, HP and capture progress':['Ricca 总览、HP 与捕获进度','Ricca overview, HP and capture progress','Ricca 概要・HP・拘束進捗'],

@@ -1,5 +1,12 @@
 // Shared Japanese copy for the landing page and guide. Keys match data-en.
 window.RICCA_JA = Object.freeze({
+  "Source & setup →": "ソース・起動方法 →",
+  "Follow updates, join the community, or treat Guoguo to a lemon tea!": "開発情報をチェック、交流グループに参加、または果果にレモンティーを一杯！",
+  "Version progress, release notes and occasional research detours.": "開発進捗、更新のお知らせ、ときどき研究の寄り道。",
+  "Community chat": "技術交流グループ",
+  "QQ group: 1129729751": "QQ グループ：1129729751",
+  "Support the project": "開発を応援する",
+  "Thank you for supporting future development.": "今後の開発へのご支援に感謝します。",
   "Quick start": "クイックスタート",
   "Three steps to get started": "3ステップですぐに開始",
   "Open the companion": "ソフトウェアを起動",
@@ -84,7 +91,6 @@ window.RICCA_JA = Object.freeze({
   "Home": "ホーム",
   "GPL-3.0 source": "GPL-3.0 ソース",
   "Support": "サポート",
-  "Credits": "謝辞",
   "Guide": "使い方",
   "Ricca 1.4.1 · verified identical English / Chinese build fingerprint": "Ricca 1.4.1 · 確認済みの英語版／中国語版ビルド",
   "Ricca × DG-LAB<br>Control Center": "Ricca × DG-LAB<br>コントロールセンター",
@@ -119,7 +125,6 @@ window.RICCA_JA = Object.freeze({
   "Choose a download channel": "ダウンロード先を選択",
   "Choose Baidu Netdisk, COS direct download or GitHub for 1.0.1.": "百度網盤、COS 直接ダウンロード、GitHub から 1.0.1 を取得できます。",
   "1.0.1 · available now": "1.0.1 · 公開中",
-  "172 automated tests and packaged launch checks passed. Download the entire ZIP and extract it; no Python installation. Existing settings are preserved. The unsigned app may trigger a Windows warning. Software limits do not guarantee physical safety.": "172件の自動テストと配布版の起動確認に合格。ZIP 全体をダウンロードして解凍するだけで、Python の別途導入は不要です。既存設定を維持します。未署名のため Windows が警告する場合があります。ソフトウェアの上限は身体の安全を保証しません。",
   "Baidu Netdisk": "百度網盤",
   "Mainland China": "中国本土向け",
   "Baidu Netdisk share. The extraction code is included in the link and can be copied below.": "百度網盤の共有リンクです。アクセスコードはリンクに含まれており、下からコピーすることもできます。",
@@ -148,8 +153,6 @@ window.RICCA_JA = Object.freeze({
   "Follow @1zhiguo": "@1zhiguo をフォロー",
   "Set your hard cap and verify low-intensity A/B output before testing. Death punishment overrides ordinary pause: use Emergency Zero to stop all sources. A software cap is not a physical-safety guarantee.": "テスト前にハード上限を設定し、低強度で A/B 出力を確認してください。死亡ペナルティは通常の一時停止より優先されます。全出力を止めるには緊急停止を使用してください。数値上限は身体の安全を保証しません。",
   "First-test checklist →": "初回テストのチェック項目 →",
-  "Acknowledgements": "謝辞",
-  "Thanks to the DG-LAB open-source project and the testers helping verify game states. Original game artwork and trademarks belong to their respective owners.": "DG-LAB オープンソースプロジェクトと、ゲーム状態の検証に協力してくださったテスターの皆様に感謝します。ゲーム原画と商標は各権利者に帰属します。",
   "Independent community project. Not affiliated with DG-LAB or the game creator. Ricca and Manaka are separate products.": "非公式のコミュニティプロジェクトです。DG-LAB やゲーム作者とは関係ありません。Ricca と Manaka は別製品です。",
   "Manaka project ↗": "Manaka プロジェクト ↗",
   "Close ×": "閉じる ×"
