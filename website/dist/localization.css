@@ -4,4 +4,18 @@ html[lang="ja"] body{font-family:"Yu Gothic UI","Meiryo","Segoe UI",sans-serif;l
 html[lang="ja"] h1{letter-spacing:-.025em;overflow-wrap:anywhere}
 .release-resources{display:flex;gap:20px;flex-wrap:wrap;font-size:12px;color:var(--cyan);line-height:1.8}
 .release-resources a:hover{text-decoration:underline}
+.manaka-home .actions .quick-start-trigger{background:#a4e9c1;color:#092416;border:1px solid #a4e9c1;font-weight:800;box-shadow:0 0 0 3px #a4e9c115}
+.manaka-home .actions .quick-start-trigger:hover{background:#c1f4d5;border-color:#c1f4d5}
+.quick-start{width:min(620px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:28px;border:1px solid #3b5a4a;border-radius:18px;background:#101b18;color:var(--text);box-shadow:0 28px 90px #0009}
+.quick-start::backdrop{background:#03070cdb}
+.quick-start-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+.quick-start-head h2{font-size:25px;line-height:1.4}
+.quick-start-close{flex-shrink:0;padding:9px 13px;min-height:38px}
+.quick-steps{list-style:none;padding:0;margin:0;display:grid;gap:18px}
+.quick-steps li{display:flex;gap:14px;align-items:flex-start}
+.quick-steps li>span{flex:0 0 32px;height:32px;display:grid;place-items:center;border-radius:10px;background:#a4e9c1;color:#092416;font-weight:800}
+.quick-steps h3{font-size:16px;margin:2px 0 5px}
+.quick-steps p{margin:0;color:#b4c6bd;font-size:13px;line-height:1.8;overflow-wrap:anywhere}
+.quick-start-note{font-size:12px;line-height:1.8;color:#e0cc9f;border-top:1px solid #30463a;padding-top:16px;margin:20px 0 14px}
+@media(max-width:520px){.quick-start{padding:20px}.quick-start-head h2{font-size:21px}.manaka-home .actions .quick-start-trigger{width:100%}}
 @media(max-width:760px){.header nav>a{display:none}.header{gap:12px}.header nav{gap:0;flex-shrink:0}.header .language{width:94px;min-width:94px}.header-start{min-width:0}.brand{letter-spacing:.04em}}

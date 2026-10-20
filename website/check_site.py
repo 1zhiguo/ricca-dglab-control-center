@@ -68,6 +68,8 @@ order = [home.index(f'id="{name}"') for name in ("top", "features", "downloads",
 assert order == sorted(order), "Keep the Manaka reference's product/features/downloads/screens/support order"
 assert home.count("data-screenshot") == 6
 assert 'aria-controls="download-sources"' in home and 'id="download-sources" hidden' in home
+assert 'aria-controls="quick-start"' in home and 'id="quick-start"' in home
+assert 'aria-labelledby="quick-start-title"' in home and 'class="quick-steps"' in home
 ja_text = (DIST / "i18n-ja.js").read_text(encoding="utf-8")
 ja = json.loads(ja_text[ja_text.index("{"):ja_text.rindex("}")+1])
 required = set().union(*(page.english for page in pages.values()))

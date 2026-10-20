@@ -1,5 +1,15 @@
 // Shared Japanese copy for the landing page and guide. Keys match data-en.
 window.RICCA_JA = Object.freeze({
+  "Quick start": "クイックスタート",
+  "Three steps to get started": "3ステップですぐに開始",
+  "Open the companion": "ソフトウェアを起動",
+  "Extract the entire ZIP and run Ricca-x-DGlab.exe. On first launch, follow the tutorial to set your safety cap.": "ZIP 全体を解凍して Ricca-x-DGlab.exe を起動します。初回はガイドに従って安全上限を設定してください。",
+  "Start the game": "ゲームを起動",
+  "Start Ricca as usual. The companion detects the running game automatically.": "いつもどおり Ricca を起動します。実行中のゲームを自動検出します。",
+  "Scan to connect": "QR コードで接続して開始",
+  "Keep your phone and PC on the same LAN. In the DG-LAB 3.0 app, use Socket mode to scan the QR code. Game feedback starts automatically.": "スマートフォンと PC を同じ LAN に接続し、DG-LAB 3.0 アプリの Socket モードで QR コードを読み取ります。ゲーム連動が自動で始まります。",
+  "Ctrl+F12 emergency-stops all output. Resume manually in the app.": "Ctrl+F12 ですべての出力を緊急停止できます。再開はソフトウェア内で手動で行ってください。",
+  "Full guide & troubleshooting →": "詳しい使い方・トラブル対処 →",
   "Skip to content": "本文へ移動",
   "Back to Dashboard": "Dashboard に戻る",
   "Features": "機能",

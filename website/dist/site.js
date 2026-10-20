@@ -64,6 +64,16 @@
     const url=new URL(location.href);
     if(url.searchParams.has('lang')){url.searchParams.set('lang',language);history.replaceState(null,'',url);}
   }));
+  const quickStart=document.querySelector('#quick-start');
+  document.querySelector('.quick-start-trigger')?.addEventListener('click',()=>{
+    if(quickStart&&!quickStart.open)quickStart.showModal();
+  });
+  quickStart?.querySelector('.quick-start-close')?.addEventListener('click',()=>quickStart.close());
+  quickStart?.addEventListener('click',event=>{
+    if(event.target!==quickStart)return;
+    const b=quickStart.getBoundingClientRect();
+    if(event.clientX<b.left||event.clientX>b.right||event.clientY<b.top||event.clientY>b.bottom)quickStart.close();
+  });
   const menu=document.querySelector('.download-menu');
   if(menu) {
     const trigger=menu.querySelector('.download-trigger'),panel=menu.querySelector('.download-source-menu');
