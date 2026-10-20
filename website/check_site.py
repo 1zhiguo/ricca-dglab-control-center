@@ -12,10 +12,15 @@ class Page(HTMLParser):
     def __init__(self, path):
         super().__init__()
         self.path, self.ids, self.refs, self.h1 = path, set(), [], 0
+        self.english, self.languages = set(), set()
         self.feed(path.read_text(encoding="utf-8"))
 
     def handle_starttag(self, tag, pairs):
         attrs = dict(pairs)
+        if attrs.get("data-en"):
+            self.english.add(attrs["data-en"])
+        if tag == "option":
+            self.languages.add(attrs.get("value"))
         if "id" in attrs:
             assert attrs["id"] not in self.ids, (self.path, "duplicate id", attrs["id"])
             self.ids.add(attrs["id"])
@@ -34,6 +39,7 @@ pages = {p.name: Page(p) for p in DIST.glob("*.html")}
 assert set(pages) == {"index.html", "guide.html"}
 for name, page in pages.items():
     assert page.h1 == 1, (name, "expected one h1")
+    assert page.languages == {"zh", "en", "ja"}, (name, "language selector")
     for reference in page.refs:
         url = urlsplit(reference)
         if url.scheme:
@@ -62,4 +68,13 @@ order = [home.index(f'id="{name}"') for name in ("top", "features", "downloads",
 assert order == sorted(order), "Keep the Manaka reference's product/features/downloads/screens/support order"
 assert home.count("data-screenshot") == 6
 assert 'aria-controls="download-sources"' in home and 'id="download-sources" hidden' in home
-print("Website checks passed: pages, local links, anchors, images, headings, external links and package isolation.")
+ja_text = (DIST / "i18n-ja.js").read_text(encoding="utf-8")
+ja = json.loads(ja_text[ja_text.index("{"):ja_text.rindex("}")+1])
+required = set().union(*(page.english for page in pages.values()))
+assert not required - ja.keys(), ("missing Japanese translations", sorted(required-ja.keys()))
+assert all(isinstance(ja[key], str) and ja[key].strip() for key in required)
+assert "Ctrl+Alt+F10" not in home and "1.0.0" not in home
+release = (DIST / "release-config.js").read_text(encoding="utf-8")
+assert 'version: "1.0.1"' in release and "releases/download/v1.0.1/" in release
+assert "cbc582be67d89f576e2e4dbe28ad874226a0f2a7bd8cb49e2778d94249ad7d37" in release
+print(f"Website checks passed: links, images, package isolation, 3 languages, {len(required)} Japanese translations and 1.0.1 downloads.")
