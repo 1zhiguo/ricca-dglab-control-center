@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090d13">
+<meta name="description" content="Ricca × DG-LAB 使用指南：自动连接输出、死亡优先级、破甲增幅、通道波形与安全停止。">
+<title>连接与使用指南 · Ricca × DG-LAB</title>
+<link rel="icon" href="assets/ricca-icon.png"><link rel="stylesheet" href="styles.css">
+<script src="release-config.js" defer></script><script src="site.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main" data-en="Skip to content">跳到正文</a>
+<header class="header shell"><a class="brand" href="index.html"><img src="assets/ricca-icon.png" alt="" width="38" height="38"><span>RICCA <i>×</i> DG-LAB</span></a><nav aria-label="Main navigation"><a href="index.html#features" data-en="Features">功能</a><a href="index.html#screens" data-en="Interface">界面</a><a href="index.html#downloads" data-en="Download">下载</a><a href="index.html" data-en="Home ↗">返回首页 ↗</a><button type="button" class="language" aria-label="Switch language">EN</button></nav></header>
+<main class="shell" id="main">
+<div class="guide-hero"><p class="eyebrow">RICCA × DG-LAB / FIELD GUIDE</p><h1 data-en="Set your limits.<br>Connect, then verify.">先设上限，<br>再连接并核对。</h1><p class="lead" data-en="A standalone Windows companion. After onboarding and a positive saved hard cap, connecting enables automatic output in valid game states.">独立 Windows 伴侣软件。完成教程并保存大于 0 的硬上限后，连接即按有效游戏状态自动输出。</p><p class="note warning" data-en="1.0.0-rc3: source is public, but physical-device verification is incomplete. No standalone installer has been published.">1.0.0-rc3：源码公开，真实设备验证尚未完成；尚未发布独立安装包。</p></div>
+<div class="guide-layout"><aside class="guide-nav" aria-label="Guide contents"><a href="#requirements" data-en="01 · Requirements">01 · 开始前准备</a><a href="#connection" data-en="02 · Connection">02 · 扫码连接</a><a href="#safety" data-en="03 · First test">03 · 首次测试</a><a href="#channels" data-en="04 · Channel rules">04 · 通道与波形</a><a href="#audio" data-en="05 · Audio & CG">05 · 音频与 CG</a><a href="#troubleshooting" data-en="06 · Troubleshooting">06 · 常见问题</a><a href="#settings" data-en="07 · Your settings">07 · 配置保存</a></aside>
+<div class="guide-content">
+<section id="requirements"><h2 data-en="01 / Before you start">01 / 开始前准备</h2><ul>
+<li data-en="Windows and Holy Knight Ricca English 1.4.1. Other builds and languages are not verified.">Windows 电脑与 Holy Knight Ricca 英文版 1.4.1；其他构建和语言未验证。</li>
+<li data-en="DG-LAB 3.0 and its app; phone and PC must be on a mutually reachable local network.">DG-LAB 3.0 及手机 App，手机与电脑在互通的局域网中。</li>
+<li data-en="The game is not included. No BepInEx or DLL injection. To run source, install Python 3.11, run setup_native.ps1, then run_native.ps1.">不包含游戏，不需要 BepInEx 或 DLL 注入。从源码运行需安装 Python 3.11，依次运行 setup_native.ps1 和 run_native.ps1。</li>
+<li data-en="Start the companion before defeat to record the HP edge. Mid-scene takeover is an explicit opt-in, not automatic gallery detection.">在败北前启动以记录 HP 变化；中途接管场景需要明确确认，不会自动把回想判成败北。</li></ul>
+<p data-en="Supported game-build fingerprint (not an installer checksum):">已适配游戏构建指纹（不是安装包校验值）：</p>
+<div class="code-row"><code class="hash" id="game-hash">5D815721F6B45251137DC8AB78446FAA3A79CFC3BC0520FC4D8EB8C872BDB52B</code><button class="button secondary" type="button" data-copy="#game-hash" data-en="Copy SHA-256">复制 SHA-256</button><span class="copy-status" role="status" aria-live="polite"></span></div>
+<a class="text-link" href="https://github.com/1zhiguo/ricca-dglab-control-center" target="_blank" rel="noopener noreferrer" data-en="GPL-3.0 source & setup →">GPL-3.0 源码与运行说明 →</a></section>
+<section id="connection"><h2 data-en="02 / Connect with Socket mode">02 / 使用 Socket 模式连接</h2><ol>
+<li data-en="Complete onboarding and save your own 0–100 hard cap. Zero disables output. If unsure, keep it at zero.">先完成教程并保存自己设定的 0–100 硬上限。0 禁用输出；不确定时保持为 0。</li>
+<li data-en="Open Device & Game, select a phone-reachable IPv4 and wait for the Socket service. Avoid unreachable VPN/virtual adapters.">进入「设备与游戏」，选择手机可访问的 IPv4，等待 Socket 就绪；避免选到不可达的 VPN／虚拟网卡。</li>
+<li data-en="In the mobile app, select Socket mode and scan the companion QR code.">手机 App 选择 Socket 模式，扫描插件生成的二维码。</li>
+<li data-en="Connection enables automatic game feedback, without Test A/B or a separate Enable Output button. Use a conservative cap before scanning.">连接成功即自动同步游戏反馈，不再需要“测试 A/B”或单独“启用输出”。扫码前务必先设保守上限。</li></ol>
+<div class="phone-guide">
+<figure><img src="assets/guide/step1.png" alt="DG-LAB mobile device page" loading="lazy"><figcaption data-en="1. Open the device page">1. 进入设备页</figcaption></figure>
+<figure><img src="assets/guide/step2.png" alt="DG-LAB Socket initialization" loading="lazy"><figcaption data-en="2. Initialize Socket">2. 初始化 Socket</figcaption></figure>
+<figure><img src="assets/guide/step3.png" alt="DG-LAB server connection" loading="lazy"><figcaption data-en="3. Connect to server">3. 打开连接服务</figcaption></figure>
+<figure><img src="assets/guide/step4.png" alt="DG-LAB QR scanner" loading="lazy"><figcaption data-en="4. Scan QR">4. 扫描二维码</figcaption></figure></div>
+<p class="note" data-en="Game discovery uses HolyKnightRicca.exe. If it fails, select the actual game EXE beside GameAssembly.dll using the path fallback.">默认按 HolyKnightRicca.exe 查找。失败时可选择与 GameAssembly.dll 同目录的真实游戏 EXE 作为路径回退。</p></section>
+<section id="safety"><h2 data-en="03 / Verify your output limits">03 / 首次测试前核对</h2><ol>
+<li data-en="Save conservative intensity tiers and a hard cap. Preset names and numerical limits do not guarantee physical safety.">保存保守强度与硬上限；档位名称和数值上限都不保证人体安全。</li>
+<li data-en="Confirm HP, scene and actions match the game. Unsupported, stale or invalid telemetry must block output.">核对 HP、场景和动作。未支持版本、失效或错误读数必须阻止输出。</li>
+<li data-en="Verify ordinary pause, emergency zero, phone disconnect and game exit with your device configured according to its instructions.">按照设备说明配置后，核对普通暂停、紧急归零、手机断连和游戏退出的停止行为。</li>
+<li data-en="Death punishment outranks ordinary pauses. Use Emergency Zero, not ordinary pause, to stop every source.">死亡惩罚优先于普通暂停。要停止一切来源，请用「紧急归零」，而不是普通暂停。</li></ol>
+<p class="note warning" data-en="Emergency Zero remains latched until you explicitly resume. Hard caps, device connection and valid fresh telemetry remain mandatory. Network/device scheduling means software cannot guarantee same-frame stopping or physical delivery.">紧急归零保持锁止，必须明确恢复。硬上限、设备连接和有效新读数始终必需。网络与设备调度存在延迟，软件不能保证同帧停止或实际送达。</p></section>
+<section id="channels"><h2 data-en="04 / Channels and waveforms">04 / 通道与波形</h2><p data-en="In Waveform Studio, choose each channel independently: HP, actions, both, audio or off. Ordinary overlaps use the stronger signal; death has explicit priority.">在「波形工作台」分别选择 A/B 的 HP、动作、两者、音频或关闭。普通反馈重叠时取较强者；死亡反馈具有独立优先级。</p><ul>
+<li data-en="Set light/medium HP-loss thresholds, intensity tiers or custom strengths, waveforms and 0.1–3 second short-event durations.">可独立设置轻／中扣血阈值、强度档位或自定义强度、波形与 0.1–3 秒短事件时长。</li>
+<li data-en="Struggle feedback is sustained until escape and has no duration slider. Guard actions do not cause punishment.">挣扎反馈持续至挣脱，没有自定义持续秒数；格挡动作不触发惩罚。</li>
+<li data-en="Armor break: ×1.0 before break, then ×1.2 once per life, with no stacks. Respawn or re-entry resets it. The final signal is still capped.">破甲前 ×1.0；本次生命首次破甲后固定 ×1.2，不叠加。复活或重进游戏重置；最终输出仍受硬上限限制。</li>
+<li data-en="Browse presets or edit a 16-point waveform. Saving applies automatically and keeps ordinary pause state.">选择预设或编辑 16 点波形；保存后自动应用，并保留普通暂停状态。</li></ul></section>
+<section id="audio"><h2 data-en="05 / Optional audio and defeat CG">05 / 可选音频与败北 CG</h2>
+<p data-en="Audio Empathy is opt-in. Choose an input/system loopback, apply settings and select the audio strategy on the target channel. It maps the envelope, not speaker identity or meaning; loopback may include other apps.">音频共感需主动开启：选择输入／系统回环，应用设置，并在目标通道选择音频策略。它按包络转换，不识别说话人或语义；系统回环可能包含其他程序声音。</p>
+<p data-en="A validated positive-to-zero HP edge triggers a bounded death punishment immediately, even during ordinary pauses. The matching defeat scene then loops the configured waveform during confirmed interaction; entry does not repeat an already-triggered death cue.">同一角色 HP 正值→0 立即触发有界死亡惩罚，普通暂停不会拦截。后续匹配败北场景在确认互动期间循环配置波形，入场不重复已触发的死亡惩罚。</p>
+<p data-en="Interaction loops ignore the game's internal scene-pause bit, but obey ordinary app pause and explicit game pause. Emergency Zero stops both death and loop output. A transient scene-read gap blocks output while retaining defeat evidence for fresh confirmation.">互动循环忽略游戏内部场景暂停位，但遵循插件普通暂停和明确的游戏暂停。紧急归零停止死亡与循环输出。切场读错时阻止输出，但保留败北证据供新读数重新确认。</p>
+<p data-en="After restarting mid-interaction, use Take Over Current Defeat Interaction in Overview and confirm. This does not replay an unwitnessed death. Galleries are not automatically treated as defeats.">中途重启后，在总览点「接管当前败北互动」并二次确认；不会补发未记录的死亡。回想模式不会自动判成败北。</p>
+<p class="note warning" data-en="These rules pass simulated checks, not completed physical-device validation. Check your actual channel outputs before relying on them.">这些规则已通过模拟检查，但尚未完成真实设备验证；请核对实际通道输出，不要把软件预览视为设备送达证明。</p></section>
+<section id="troubleshooting"><h2 data-en="06 / Troubleshooting">06 / 连接与输出排查</h2>
+<details><summary data-en="No QR code / occupied port 9999">没有二维码／9999 端口被占用</summary><p data-en="Close duplicate windows yourself and use Cannot Connect? to inspect the port and retry Socket. Do not disable the firewall.">自行退出重复窗口，用「连接不上？」检查端口并重试 Socket；不要关闭防火墙来强行连接。</p></details>
+<details><summary data-en="Phone cannot connect">手机连不上</summary><p data-en="Use the reachable Wi-Fi/Ethernet IPv4, rescan the updated QR code and check VPN LAN access or guest isolation. 127.0.0.1 is not reachable from your phone.">选择可达的 Wi-Fi／以太网 IPv4，重扫更新后的二维码，检查 VPN 局域网访问与访客隔离；手机不能通过 127.0.0.1 访问电脑。</p></details>
+<details><summary data-en="Connected but no pulse">连接了但没有 Pulse</summary><p data-en="Check onboarding, cap, emergency latch, ordinary pause, game build, telemetry freshness, channel and rule switches. There are no mandatory A/B test or enable-output buttons. In a mid-start CG, check the explicit takeover option.">检查教程、上限、急停锁止、普通暂停、游戏版本、读数新鲜度、通道和规则开关。没有强制 A/B 测试或启用按钮。中途启动的 CG 可检查接管入口。</p></details>
+<details><summary data-en="Unsupported game update">游戏更新后不识别</summary><p data-en="Do not bypass the DLL fingerprint or reuse unverified offsets. Report the exact build and redacted error for separate compatibility work.">不要绕过 DLL 指纹或沿用未经验证的偏移；提供准确构建与脱敏错误，单独适配核对。</p></details></section>
+<section id="settings"><h2 data-en="07 / Keep your settings">07 / 更新时保留配置</h2><p data-en="Settings and custom waveforms are outside the version directory:">配置与自定义波形位于版本目录之外：</p>
+<code class="hash">%LOCALAPPDATA%\Ricca-x-DGlab\settings.json<br>%LOCALAPPDATA%\Ricca-x-DGlab\waveforms\</code>
+<p data-en="Successful saves show a notification. A valid backup is kept as settings.json.bak. Restoring defaults requires confirmation and does not delete your waveform library.">保存成功会提示；有效备份为 settings.json.bak。恢复默认需要确认，不删除波形库。</p>
+<p data-en="Updates preserve this user directory. After a normal restart, connection enables automatic output once onboarding and the saved hard cap permit it; do not confuse source publication with a new installer release.">更新保留此用户目录。正常重启后，只要教程与已保存上限允许，连接即自动输出；源码公开不等于已发布新安装包。</p>
+<a class="text-link" href="index.html#downloads" data-en="Release status →">查看发布状态 →</a></section>
+</div></div></main>
+<footer class="footer shell"><div><a class="brand" href="index.html">RICCA × DG-LAB</a><p data-en="Independent community software. Not affiliated with the game creator or DG-LAB. Follow the device manual.">独立社区软件，与游戏作者及 DG-LAB 无官方隶属关系；请遵循设备说明。</p></div><div class="footer-links"><a href="index.html" data-en="Home">返回首页</a><a href="https://github.com/1zhiguo/ricca-dglab-control-center" target="_blank" rel="noopener noreferrer" data-en="GPL-3.0 source">GPL-3.0 源码</a><a href="https://x.com/1zhiguo" target="_blank" rel="noopener noreferrer">X · @1zhiguo</a><span>© 2026 · GUOGUO</span></div></footer>
+</body></html>

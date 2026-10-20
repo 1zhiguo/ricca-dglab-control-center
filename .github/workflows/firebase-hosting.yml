@@ -1,0 +1,23 @@
+name: Deploy Ricca website
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: firebase-ricca-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python website/check_site.py
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_RICCA_DGLAB }}'
+          channelId: live
+          projectId: ricca-dglab

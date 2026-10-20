@@ -1,0 +1,19 @@
+{
+  "hosting": {
+    "site": "ricca-dglab",
+    "public": "website/dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "**/*.map"],
+    "cleanUrls": true,
+    "trailingSlash": false,
+    "headers": [
+      {"source": "**", "headers": [
+        {"key": "X-Content-Type-Options", "value": "nosniff"},
+        {"key": "Referrer-Policy", "value": "strict-origin-when-cross-origin"},
+        {"key": "Permissions-Policy", "value": "microphone=(), camera=(), geolocation=()"},
+        {"key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"}
+      ]},
+      {"source": "**/*.@(css|js|html)", "headers": [{"key": "Cache-Control", "value": "no-cache"}]},
+      {"source": "**/*.@(png|jpg|jpeg|webp|svg|ico)", "headers": [{"key": "Cache-Control", "value": "public,max-age=3600"}]}
+    ]
+  }
+}

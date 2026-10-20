@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ricca Memory Dashboard</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><span></span></div>
+        <div><strong>RICCA</strong><small>MEMORY DASHBOARD</small></div>
+      </div>
+
+      <nav class="nav" aria-label="Dashboard sections">
+        <button class="nav-item active" data-target="overview"><span class="nav-icon">◈</span><span>实时总览</span></button>
+        <button class="nav-item" data-target="story"><span class="nav-icon">◇</span><span>剧情监视</span></button>
+        <button class="nav-item" data-target="diagnostics"><span class="nav-icon">⌁</span><span>读取诊断</span></button>
+        <button class="nav-item" data-target="events"><span class="nav-icon">≡</span><span>事件记录</span><span id="eventCount" class="nav-count">0</span></button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="safety-card">
+          <span class="safety-dot"></span>
+          <div><strong>只读模式</strong><small>不写游戏 / 不输出设备</small></div>
+        </div>
+        <div class="build-label">EN 1.4.1 · IL2CPP</div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">LIVE PROCESS TELEMETRY</div>
+          <h1 id="pageTitle">实时总览</h1>
+          <p id="pageSubtitle">玩家、Boss、动作与输出门控状态</p>
+        </div>
+        <div class="top-actions">
+          <div id="sampleClock" class="sample-clock">尚无样本</div>
+          <div id="connectionPill" class="connection-pill waiting"><span></span><strong>等待游戏</strong></div>
+        </div>
+      </header>
+
+      <div id="errorBanner" class="error-banner hidden"></div>
+
+      <section id="overview" class="view-section active">
+        <div class="gate-strip">
+          <div><span class="gate-label">联动门控</span><strong id="gateState">等待数据</strong></div>
+          <div class="gate-facts">
+            <span id="sceneBadge" class="chip neutral">NO SCENE</span>
+            <span id="pauseBadge" class="chip neutral">PAUSE —</span>
+            <span id="playerPtrBadge" class="chip neutral">PLAYER —</span>
+          </div>
+        </div>
+
+        <div class="overview-grid">
+          <article class="card vitals-card">
+            <div class="card-heading"><div><span class="kicker">PLAYER VITALS</span><h2>玩家状态</h2></div><span id="playerStateChip" class="state-chip">—</span></div>
+            <div class="vitals-layout">
+              <div class="hp-gauge">
+                <svg viewBox="0 0 180 180" role="img" aria-label="HP gauge">
+                  <circle class="gauge-track" cx="90" cy="90" r="72"></circle>
+                  <circle id="hpGauge" class="gauge-value" cx="90" cy="90" r="72"></circle>
+                </svg>
+                <div class="gauge-copy"><span>HP</span><strong id="hpPercent">—</strong><small id="hpValues">— / —</small></div>
+              </div>
+              <div class="vitals-info">
+                <div class="metric-row"><span>MAGIC</span><strong id="mpValues">— / —</strong></div>
+                <div class="linear"><i id="mpBar"></i></div>
+                <div class="metric-pair"><div><span>DEFENCE</span><strong id="defenceValue">—</strong></div><div><span>SPEED</span><strong id="speedValue">—</strong></div></div>
+                <div class="metric-pair"><div><span>INVINCIBLE</span><strong id="invincibleValue">—</strong></div><div><span>AI CONTROL</span><strong id="aiValue">—</strong></div></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card action-card">
+            <div class="card-heading"><div><span class="kicker">ACTION EDGE</span><h2>当前动作</h2></div><span id="actionLed" class="activity-led"></span></div>
+            <div id="actionName" class="action-name">等待动作数据</div>
+            <div id="actionHash" class="mono action-hash">HASH —</div>
+            <div class="action-time"><div><span>动作时间</span><strong id="actionTime">—</strong></div><div class="linear cyan"><i id="actionTimeBar"></i></div></div>
+            <div class="status-table compact">
+              <div><span>Character State</span><strong id="characterState">—</strong></div>
+              <div><span>Trigger Enabled</span><strong id="triggerEnabled">—</strong></div>
+              <div><span>Check Hash</span><strong id="checkHash">—</strong></div>
+            </div>
+          </article>
+
+          <article class="card boss-card">
+            <div class="card-heading"><div><span class="kicker">BOSS TARGET</span><h2>Boss 监视</h2></div><span id="bossBattleChip" class="state-chip muted">未交战</span></div>
+            <div class="boss-hp"><div><span>HP</span><strong id="bossHpPercent">—</strong></div><div class="linear danger"><i id="bossHpBar"></i></div><small id="bossHpValues">— / —</small></div>
+            <div class="status-table compact">
+              <div><span>数量</span><strong id="bossCount">—</strong></div>
+              <div><span>状态</span><strong id="bossState">—</strong></div>
+              <div><span>动作</span><strong id="bossAction">—</strong></div>
+              <div><span>目标地址</span><strong id="targetActor" class="mono">—</strong></div>
+            </div>
+          </article>
+
+          <article class="card output-card">
+            <div class="card-heading"><div><span class="kicker">DG-LAB PREVIEW</span><h2>输出映射预览</h2></div><span class="readonly-tag">NOT CONNECTED</span></div>
+            <div class="channel-row"><div class="channel-token a">A</div><div class="channel-data"><div><span>伤害强度</span><strong id="channelAValue">0%</strong></div><div class="linear pink"><i id="channelABar"></i></div></div></div>
+            <div class="channel-row"><div class="channel-token b">B</div><div class="channel-data"><div><span>动作脉冲</span><strong id="channelBValue">IDLE</strong></div><div class="linear violet"><i id="channelBBar"></i></div></div></div>
+            <p class="card-note">仅根据最近事件演算预览值；此版本没有蓝牙连接，也不会写强度。</p>
+          </article>
+
+          <article class="card chart-card">
+            <div class="card-heading"><div><span class="kicker">LIVE SIGNAL</span><h2>生命与打击停顿</h2></div><div class="legend"><span class="hp-line">玩家 HP</span><span class="boss-line">Boss HP</span><span class="stop-line">Hit-stop</span></div></div>
+            <div class="chart-wrap"><canvas id="signalChart"></canvas><div id="chartEmpty" class="chart-empty">等待连续样本</div></div>
+          </article>
+
+          <article class="card context-card">
+            <div class="card-heading"><div><span class="kicker">SCENE CONTEXT</span><h2>场景与时间</h2></div><span id="stageLoadedChip" class="state-chip muted">—</span></div>
+            <div class="context-main"><strong id="stageName">—</strong><span id="sceneIndex">Scene —</span></div>
+            <div class="time-grid">
+              <div><span>MASTER</span><strong id="masterScale">—</strong></div>
+              <div><span>DIRECTION</span><strong id="directionScale">—</strong></div>
+              <div><span>STAGE</span><strong id="stageScale">—</strong></div>
+            </div>
+            <div class="status-table compact">
+              <div><span>暂停掩码</span><strong id="pauseMask">—</strong></div>
+              <div><span>用户暂停</span><strong id="userPause">—</strong></div>
+              <div><span>资源加载</span><strong id="resourcesLoaded">—</strong></div>
+              <div><span>Game Over</span><strong id="gameOver">—</strong></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="story" class="view-section">
+        <div class="section-intro"><div><span class="kicker">ADV MONITOR</span><h2>剧情与过场监视</h2><p>剧情中也保持读取，台词推进可作为独立 pulse 事件源。</p></div><span id="storyModeChip" class="chip neutral">ADV OFFLINE</span></div>
+        <div class="story-grid">
+          <article class="card dialogue-card">
+            <div class="dialogue-meta"><span id="storyAsset">NO ASSET</span><strong id="storyLine">LINE —</strong></div>
+            <div id="storySpeaker" class="speaker">等待剧情</div>
+            <blockquote id="storyMessage">进入 ADV 场景后，这里会显示当前说话人和台词。</blockquote>
+            <div class="story-flags">
+              <span>WAIT NEXT <strong id="storyWait">—</strong></span>
+              <span>SHOW UI <strong id="storyShowUi">—</strong></span>
+              <span>SKIP MODE <strong id="storySkip">—</strong></span>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card-heading"><div><span class="kicker">ADV STATE</span><h2>控制器字段</h2></div></div>
+            <div class="status-table story-table">
+              <div><span>Scene Name</span><strong id="advSceneName">—</strong></div>
+              <div><span>Line Index</span><strong id="advLineIndex">—</strong></div>
+              <div><span>ADV State</span><strong id="advState">—</strong></div>
+              <div><span>Display State</span><strong id="displayState">—</strong></div>
+              <div><span>Next Action</span><strong id="nextAction">—</strong></div>
+              <div><span>ACT Cut Mode</span><strong id="actCutMode">—</strong></div>
+              <div><span>ACT Screen Paused</span><strong id="actScreenPaused">—</strong></div>
+              <div><span>ADV Time Scale</span><strong id="advTimeScale">—</strong></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="diagnostics" class="view-section">
+        <div class="section-intro"><div><span class="kicker">READER HEALTH</span><h2>读取诊断</h2><p>用来判断地址是否稳定，以及场景切换后是否正确重新绑定。</p></div><span id="healthChip" class="chip neutral">WAITING</span></div>
+        <div class="diagnostic-grid">
+          <article class="card health-card">
+            <div class="health-stat"><span>实际采样率</span><strong id="pollHz">—</strong><small>Hz</small></div>
+            <div class="health-stat"><span>读取延迟</span><strong id="latencyMs">—</strong><small>ms</small></div>
+            <div class="health-stat"><span>累计样本</span><strong id="sampleCount">—</strong><small>samples</small></div>
+            <div class="health-stat"><span>伤害聚合窗</span><strong id="damageWindow">—</strong><small>ms</small></div>
+          </article>
+          <article class="card pointers-card">
+            <div class="card-heading"><div><span class="kicker">LIVE POINTERS</span><h2>对象地址</h2></div></div>
+            <div id="pointerTable" class="pointer-table"></div>
+          </article>
+          <article class="card raw-card">
+            <div class="card-heading"><div><span class="kicker">CURRENT SNAPSHOT</span><h2>完整 JSON</h2></div><button id="copyJson" class="ghost-button">复制</button></div>
+            <pre id="rawJson">{}</pre>
+          </article>
+        </div>
+      </section>
+
+      <section id="events" class="view-section">
+        <div class="section-intro events-head"><div><span class="kicker">EVENT TIMELINE</span><h2>事件记录</h2><p>掉血采用 300 ms 聚合，避免同一击的分段写入被误判为多次脉冲。</p></div><button id="clearVisualEvents" class="ghost-button">隐藏现有记录</button></div>
+        <div class="filter-row" role="group" aria-label="Event filters">
+          <button class="filter active" data-filter="all">全部</button>
+          <button class="filter" data-filter="damage">伤害</button>
+          <button class="filter" data-filter="action">动作</button>
+          <button class="filter" data-filter="story">剧情</button>
+          <button class="filter" data-filter="system">系统</button>
+        </div>
+        <div id="eventList" class="event-list"><div class="empty-state">等待事件</div></div>
+      </section>
+    </main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>
