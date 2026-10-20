@@ -15,7 +15,7 @@ The desktop companion remains independent; the website does not connect to a dev
 - `../firebase.json`: public Firebase Hosting deploy, restricted to `website/dist` and site `ricca-dglab`.
 - `../.firebaserc`: the independent `ricca-dglab` Firebase project, never the Manaka project.
 
-GitHub downloads point to the published 1.0.1 ZIP; COS/Baidu stay disabled until real mirror links are supplied. No game files, telemetry recordings,
+GitHub and COS downloads point to the published 1.0.1 ZIP; Baidu opens the supplied share link with its extraction code displayed and copyable. No game files, telemetry recordings,
 user configuration, device commands, tracking scripts or private game assets are distributed.
 Game icon artwork and DG-LAB marks belong to their respective rights holders.
 

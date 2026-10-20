@@ -4,6 +4,11 @@ html[lang="ja"] body{font-family:"Yu Gothic UI","Meiryo","Segoe UI",sans-serif;l
 html[lang="ja"] h1{letter-spacing:-.025em;overflow-wrap:anywhere}
 .release-resources{display:flex;gap:20px;flex-wrap:wrap;font-size:12px;color:var(--cyan);line-height:1.8}
 .release-resources a:hover{text-decoration:underline}
+.baidu-code{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 14px;color:var(--muted);font-size:12px}
+.baidu-code code{padding:5px 8px;border-radius:6px;background:#0a111b;color:var(--text);font:600 14px Consolas,monospace;letter-spacing:.08em;user-select:all}
+.code-copy{padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);color:var(--text);font-size:11px;cursor:pointer}
+.code-copy:hover{border-color:var(--cyan)}
+.baidu-code .copy-status{flex-basis:100%;min-height:0;font-size:11px}
 .manaka-home .actions .quick-start-trigger{background:#a4e9c1;color:#092416;border:1px solid #a4e9c1;font-weight:800;box-shadow:0 0 0 3px #a4e9c115}
 .manaka-home .actions .quick-start-trigger:hover{background:#c1f4d5;border-color:#c1f4d5}
 .quick-start{width:min(620px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:28px;border:1px solid #3b5a4a;border-radius:18px;background:#101b18;color:var(--text);box-shadow:0 28px 90px #0009}

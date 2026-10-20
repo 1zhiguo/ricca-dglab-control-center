@@ -8,6 +8,10 @@
   "signed": false,
   "automated_tests": 172,
   "packaged_smoke_pages": [0, 2, 5, 6],
-  "urls": {"cos": null, "baidu": null},
+  "urls": {
+    "cos": "https://manaka-dglab-downloads-1504229034.cos.ap-shanghai.myqcloud.com/ricca_releases/v1.0.1/Ricca-x-DGlab-1.0.1-windows-x64.zip",
+    "baidu": "https://pan.baidu.com/s/1cbCw41CS3LZoDqwQMFCgwg?pwd=848y"
+  },
+  "baidu_extraction_code": "848y",
   "note": "This checksum identifies the existing portable build; documentation-only commits may follow without rebuilding or replacing this archive."
 }

@@ -17,12 +17,13 @@
       node.textContent=release.sha256||choose('校验值待生成','Checksum pending','チェックサム準備中');
     });
     document.querySelectorAll('[data-release-version]').forEach(node=>{node.textContent=release.version||'—';});
+    document.querySelectorAll('[data-baidu-code]').forEach(node=>{node.textContent=release.baiduCode||'—';});
     const names={baidu:{zh:'百度网盘',en:'Baidu Netdisk',ja:'百度網盤'},direct:{zh:'高速直链',en:'Direct download',ja:'直接ダウンロード'},github:{zh:'GitHub',en:'GitHub',ja:'GitHub'}};
     document.querySelectorAll('[data-download]').forEach(link=>{
       const url=release.urls?.[link.dataset.download];
       const valid=typeof url==='string'&&/^https:\/\//.test(url);
       const label=link.dataset.channelLabel?names[link.dataset.download][language]+' · ':'';
-      if(valid) {link.href=url;link.removeAttribute('aria-disabled');link.textContent=label+choose('下载 ZIP ↗','Download ZIP ↗','ZIP をダウンロード ↗');link.target='_blank';link.rel='noopener noreferrer';}
+      if(valid) {link.href=url;link.removeAttribute('aria-disabled');link.textContent=label+(link.dataset.download==='baidu'?choose('前往网盘 ↗','Open Netdisk ↗','網盤を開く ↗'):choose('下载 ZIP ↗','Download ZIP ↗','ZIP をダウンロード ↗'));link.target='_blank';link.rel='noopener noreferrer';}
       else {link.removeAttribute('href');link.setAttribute('aria-disabled','true');link.textContent=label+choose('稍后开放','Coming later','後日公開');}
     });
   }

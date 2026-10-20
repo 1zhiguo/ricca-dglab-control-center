@@ -79,4 +79,7 @@ assert "Ctrl+Alt+F10" not in home and "1.0.0" not in home
 release = (DIST / "release-config.js").read_text(encoding="utf-8")
 assert 'version: "1.0.1"' in release and "releases/download/v1.0.1/" in release
 assert "cbc582be67d89f576e2e4dbe28ad874226a0f2a7bd8cb49e2778d94249ad7d37" in release
+assert "ricca_releases/v1.0.1/Ricca-x-DGlab-1.0.1-windows-x64.zip" in release
+assert "https://pan.baidu.com/s/1cbCw41CS3LZoDqwQMFCgwg?pwd=848y" in release
+assert 'baiduCode: "848y"' in release and 'data-copy="#baidu-code"' in home
 print(f"Website checks passed: links, images, package isolation, 3 languages, {len(required)} Japanese translations and 1.0.1 downloads.")
