@@ -1,5 +1,13 @@
 # Source publication and Firebase Hosting
 
+## 1.0.1 hotkey update
+
+Keep the frozen 1.0.0 ZIP/tag unchanged. 1.0.1 adds direct key-event recording,
+single-key stop shortcuts, default Ctrl+F12 via a pass-through F12 observer, and
+the penultimate onboarding step. Preserve saved user shortcuts on update.
+Verify native observer installation/removal and registration conflicts, isolated
+Qt key recording, onboarding save/failure, all unit tests and portable launch.
+
 ## 1.0.0 freeze
 
 Run `tools/build_release.py` using the build Python with PyInstaller installed.

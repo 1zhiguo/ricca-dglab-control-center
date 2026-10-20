@@ -76,21 +76,21 @@ def build():
         source_files += [p for p in (ROOT/folder).rglob("*") if p.is_file() and "__pycache__" not in p.parts
                          and p.suffix in {".py",".qml",".json",".png",".ico",".jpg",".txt"}]
     source_hashes={p.relative_to(ROOT).as_posix():digest(p) for p in source_files}
-    with zipfile.ZipFile(app/"SOURCE-1.0.0.zip","w",zipfile.ZIP_DEFLATED) as bundle:
+    with zipfile.ZipFile(app/("SOURCE-"+__version__+".zip"),"w",zipfile.ZIP_DEFLATED) as bundle:
         for path in source_files: bundle.write(path,path.relative_to(ROOT).as_posix())
     (app/"BUILD_INFO.json").write_text(json.dumps({"version":__version__,"platform":"windows-x64",
         "source_sha256":source_hashes,"dependencies":versions,"game_included":False},indent=2),encoding="utf-8")
     (app/"START_HERE.txt").write_text(
-        "Ricca x DG-LAB 1.0.0\n\n解压整个文件夹，双击 Ricca-x-DGlab.exe。无需安装 Python 或 BepInEx。\n"
+        f"Ricca x DG-LAB {__version__}\n\n解压整个文件夹，双击 Ricca-x-DGlab.exe。无需安装 Python 或 BepInEx。\n"
         "首次运行先设置安全硬上限，手机与电脑同一局域网扫码连接。\n"
-        "全局急停 Ctrl+Alt+F10，可在个性化范围自定义；仅归零不恢复。\n"
+        "全局急停默认 Ctrl+F12，在个性化范围直接按键录入，可设单键；仅归零不恢复。\n"
         "支持指定指纹的 Ricca 1.4.1 中/英文构建。不含游戏，不写游戏内存。\n"
         "配置保存在 %LOCALAPPDATA%/Ricca-x-DGlab，更新时不会覆盖。\n\n"
         "Extract the ENTIRE folder and run Ricca-x-DGlab.exe. No Python installation needed.\n"
-        "Set the safety cap first. Global emergency stop: Ctrl+Alt+F10 (customizable).\n"
+        "Set the safety cap first. Global emergency stop: Ctrl+F12 (press to record, single keys supported).\n"
         "The software cap does not guarantee physical safety; follow device instructions.\n\n"
         "フォルダー全体を解凍し Ricca-x-DGlab.exe を起動。Python の別途導入は不要です。\n"
-        "最初にハード上限を設定。緊急停止：Ctrl+Alt+F10（変更可能）。\n",encoding="utf-8-sig")
+        "最初にハード上限を設定。緊急停止：Ctrl+F12（キーを押して変更、単独キーも可）。\n",encoding="utf-8-sig")
     # Run the packaged app with isolated user data and no socket/microphone.
     qa=work/"qa"; qa.mkdir()
     env={**os.environ,"LOCALAPPDATA":str(qa),"PYTHONPATH":"","PYTHONHOME":""}
@@ -104,7 +104,7 @@ def build():
     info={"version":__version__,"filename":archive.name,"sha256":digest(archive),"bytes":archive.stat().st_size,
           "source_manifest_sha256":digest(app/"BUILD_INFO.json"),"packaged_smoke_pages":[0,2,5,6]}
     (release/(archive.name+".sha256")).write_text(info["sha256"]+"  "+archive.name+"\n",encoding="ascii")
-    (release/"release-1.0.0.json").write_text(json.dumps(info,indent=2),encoding="utf-8")
+    (release/("release-"+__version__+".json")).write_text(json.dumps(info,indent=2),encoding="utf-8")
     (work/"package-path.txt").write_text(str(app),encoding="utf-8")
     print(json.dumps({**info,"app_directory":str(app),"qa_directory":str(qa)},ensure_ascii=False),flush=True)
 

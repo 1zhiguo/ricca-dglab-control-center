@@ -1,9 +1,11 @@
 # Ricca real-device diagnostics
 
-For this development checkout, launch `Ricca-x-DGlab.exe` in the project root
-(`Desktop/Ricca-x-DGlab`), not the `public_repo/ricca-dglab-control-center` mirror.
-Close the old plugin normally before starting the updated one. This update does
-not restart the running process, unlock emergency stop or send test output.
+For a portable release, extract the entire ZIP and launch its `Ricca-x-DGlab.exe`.
+For a source checkout, use `run_native.ps1` after setup; see [CONTRIBUTING.md](CONTRIBUTING.md).
+The developer's `public_repo` folder is a publication mirror, not an installation.
+Close the old plugin normally before starting the updated one. Updating does not
+unlock emergency stop or send test output. See the [user guide](docs/USAGE.md) for
+supported builds, pairing and configuration paths.
 
 ## Configuration compatibility
 

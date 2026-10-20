@@ -17,8 +17,12 @@ details or secrets in a public issue. Do not test an exploit on a person/device.
 English and Chinese 1.4.1 with the verified identical core fingerprint are supported. Do not disable fingerprint
 verification to run unverified offsets against a different game build.
 
-Ctrl+Alt+F10 is the default global Emergency Zero chord. It can be changed in
-Intensity Range. Registration conflicts are reported, never silently accepted.
+Ctrl+F12 is the default global Emergency Zero chord from 1.0.1. Single keys and
+press-to-record customization are supported. Saved shortcuts are preserved on upgrade.
+F12 uses a pass-through keyboard observer because Windows reserves F12 for debuggers;
+it does not suppress game input or store typed text. It can be changed in
+Intensity Range. RegisterHotKey conflicts are reported; the F12 observer cannot
+claim exclusive ownership and other apps may also react to that chord.
 An independent Win32 message thread asks the Socket thread to zero before
 notifying Qt; it is not a guarantee against OS/device failure or disconnected
 transport. Shutdown requests zero before waiting for audio/telemetry cleanup.

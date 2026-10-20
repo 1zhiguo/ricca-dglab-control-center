@@ -159,7 +159,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "audio_gate": 12,
     "audio_gain": 1.0,
     "audio_queue_minimum": 0,
-    "emergency_hotkey": "Ctrl+Alt+F10",
+    "emergency_hotkey": "Ctrl+F12",
     "audio_channel": "B",
     "audio_story_only": True,
     "event_rules": DEFAULT_EVENT_RULES,
@@ -219,7 +219,7 @@ def _sanitize(raw: object) -> dict[str, Any]:
         "audio_gate": max(0, min(95, int(raw.get("audio_gate", 12)))),
         "audio_gain": round(max(0.0, min(10.0, _number(raw.get("audio_gain"), 1.0))), 1),
         "audio_queue_minimum": round(max(0.0, min(100.0, _number(raw.get("audio_queue_minimum"), 0)))),
-        "emergency_hotkey": str(raw.get("emergency_hotkey") or "Ctrl+Alt+F10"),
+        "emergency_hotkey": str(raw.get("emergency_hotkey") or "Ctrl+F12"),
         "audio_channel": (
             str(raw.get("audio_channel", "B")).upper()
             if str(raw.get("audio_channel", "B")).upper() in {"A", "B", "AB"}

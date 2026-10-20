@@ -1375,7 +1375,15 @@ class AppBackend(QObject):
 
     @Property(str, notify=changed)
     def emergencyHotkey(self) -> str:
-        return self._config.values.get("emergency_hotkey", "Ctrl+Alt+F10")
+        return self._config.values.get("emergency_hotkey", "Ctrl+F12")
+
+    @Slot(int, int, result=str)
+    def captureEmergencyHotkey(self, key: int, modifiers: int) -> str:
+        from .hotkey import chord_from_qt
+        try:
+            return chord_from_qt(key, modifiers)
+        except ValueError:
+            return ""
 
     @Property(str, notify=changed)
     def hotkeyStatus(self) -> str:

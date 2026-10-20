@@ -1,0 +1,13 @@
+{
+  "version": "1.0.1",
+  "filename": "Ricca-x-DGlab-1.0.1-windows-x64.zip",
+  "sha256": "cbc582be67d89f576e2e4dbe28ad874226a0f2a7bd8cb49e2778d94249ad7d37",
+  "bytes": 121349681,
+  "source_manifest_sha256": "b6517fb0bde90a5488dbf7c49c8e64887446b2317e07b943df3c3e808ea5ed40",
+  "global_emergency_hotkey": "Ctrl+F12",
+  "signed": false,
+  "automated_tests": 172,
+  "packaged_smoke_pages": [0, 2, 5, 6],
+  "urls": {"cos": null, "baidu": null},
+  "note": "This checksum identifies the existing portable build; documentation-only commits may follow without rebuilding or replacing this archive."
+}
