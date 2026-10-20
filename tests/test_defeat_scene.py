@@ -22,9 +22,71 @@ def cg(playing=1, *, cut=0):
 
 
 class DefeatSceneTests(unittest.TestCase):
+    def test_duration_limits_roundtrip_do_not_change_existing_strength_or_wave(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            config = ProductConfig(Path(directory) / "settings.json")
+            policies = default_channel_policies()
+            for policy in policies.values():
+                policy["rules"]["player_down"].update(duration=99, custom_strength=22, wave="tap")
+                policy["rules"]["armor_break"].update(duration=99, custom_strength=13, wave="impact")
+                policy["rules"]["hit_normal"]["duration"] = 99
+            config.update({"channel_policies": policies})
+            loaded = ProductConfig(config.path).values["channel_policies"]
+            for policy in loaded.values():
+                rules = policy["rules"]
+                self.assertEqual(rules["player_down"]["duration"], 10)
+                self.assertEqual(rules["armor_break"]["duration"], 5)
+                self.assertEqual(rules["hit_normal"]["duration"], 3)
+                self.assertEqual((rules["player_down"]["wave"], rules["player_down"]["custom_strength"]), ("tap", 22))
+                self.assertEqual((rules["armor_break"]["wave"], rules["armor_break"]["custom_strength"]), ("impact", 13))
+
+    def test_catalogued_gallery_loops_from_dialogue_without_requiring_death_or_atd_controls(self):
+        state = cg(1)
+        state["atd"] = {}
+        for now in (1, 1.08):
+            self.session.observe(state, now=now, allow_story=True, paused=False,
+                                 registered_scenes=["Scene3D_RiccaGhoul"])
+            self.assertEqual(self.preview(now).strength_a, 0)
+        self.session.observe(state, now=1.16, allow_story=True, paused=False,
+                             registered_scenes=["Scene3D_RiccaGhoul"])
+        self.assertEqual(self.preview(1.16).strength_a, 15)
+        self.assertFalse(hasattr(self.session, "penalty_started"))
+        self.assertEqual(self.session.preview(self.policies, self.strengths, 30,
+                         now=1.16, allow=True, allow_loop=False).strength_a, 0)
+        self.assertEqual(self.preview(1.7).strength_a, 0)  # Stale read stops, no timer-only loop.
+
+    def test_catalogue_root_switch_exit_loading_and_disabled_channel(self):
+        catalog = ["Scene3D_RiccaGhoul", "Scene3D_RiccaFortMobGoblin"]
+        def observe(state, now, allow=True):
+            self.session.observe(state, now=now, allow_story=allow, paused=False,
+                                 registered_scenes=catalog)
+        for now in (1, 1.08, 1.16):
+            observe(cg(), now)
+        self.policies["A"]["mode"] = "off"
+        self.assertEqual(self.preview(1.16).strength_a, 0)
+        self.assertEqual(self.preview(1.16).strength_b, 15)
+        other = cg()
+        other["story"]["asset_name"] = "ADV/Scene3D_RiccaFortMobGoblin/intro.csv"
+        observe(other, 2)
+        self.assertEqual(self.preview(2).strength_b, 0)
+        observe(other, 2.08); observe(other, 2.16)
+        self.assertEqual(self.preview(2.16).strength_b, 15)
+        observe(dict(other, scene="other"), 2.2)
+        self.assertEqual(self.preview(2.2).strength_b, 0)
+        self.assertFalse(self.session.root)
+        for now in (3, 3.08, 3.16):
+            observe(other, now)
+        observe(dict(other, stage={"scene_change_playing": True}), 3.2, allow=False)
+        self.assertEqual(self.preview(3.2).strength_b, 0)
+
     def setUp(self):
         self.session = DefeatSceneSession()
         self.policies = default_channel_policies()
+        self.policies["B"]["mode"] = "action"
+        self.policies["B"]["rules"]["defeat_interaction"]["playback"] = "wave"
+        # Existing saved profile: keep medium loops independent of fresh defaults.
+        self.policies["A"]["rules"]["defeat_interaction"]["tier"] = "medium"
         self.strengths = {"low": 5, "medium": 15, "high": 25, "death": 55}
 
     def observe(self, state, t, allow=True, paused=False):
@@ -51,21 +113,20 @@ class DefeatSceneTests(unittest.TestCase):
         self.assertEqual(self.preview(3.2).strength_a, 0)
         self.assertFalse(self.session.root)
 
-    def test_three_samples_one_capped_penalty_then_constant_interaction_until_dialogue(self):
+    def test_three_samples_loop_only_never_schedule_second_death_penalty(self):
         self.observe(death(), 0, allow=False)
         self.observe(cg(), 1)
         self.assertEqual(self.preview(1).strength_a, 0)
         self.observe(cg(), 1.08)
         self.observe(cg(), 1.16)
-        started = self.session.penalty_started
-        self.assertEqual(self.preview(1.2).strength_a, 30)
+        self.assertEqual(self.preview(1.2).strength_a, 0)
         self.observe(cg(0), 1.3)
-        self.assertEqual(self.preview(1.3).strength_a, 30)  # stronger wins, never add
+        self.assertEqual(self.preview(1.3).strength_a, 15)
         self.observe(cg(0, cut=3), 5)
         self.assertEqual(self.preview(5).strength_a, 15)
         self.observe(cg(0, cut=4), 100)
         self.assertEqual(self.preview(100).strength_b, 15)
-        self.assertEqual(self.session.penalty_started, started)
+        self.assertFalse(hasattr(self.session, "penalty_started"))
         self.observe(cg(1), 100.1)
         self.assertEqual(self.preview(100.1).strength_a, 0)
         self.observe(cg(0), 100.2)
@@ -77,43 +138,42 @@ class DefeatSceneTests(unittest.TestCase):
         self.assertEqual(self.preview(1.2, allow=False).strength_a, 0)
         self.stable(cg(0), 2)
         self.assertEqual(self.preview(2.2).strength_a, 15)
-        self.assertIsNone(self.session.penalty_started)
+        self.assertFalse(hasattr(self.session, "penalty_started"))
         self.assertEqual(self.preview(2.7).strength_a, 0)
 
-    def test_automatic_story_pause_retains_pending_entry_until_three_resumed_samples(self):
+    def test_automatic_story_pause_never_queues_a_deferred_entry_penalty(self):
         self.observe(death(), 0, allow=False)
         for now in (1, 2, 20):
             self.observe(cg(1), now, allow=False)
-            self.assertTrue(self.session.entry_pending)
+            self.assertFalse(hasattr(self.session, "entry_pending"))
             self.assertEqual(self.preview(now, allow=False).strength_a, 0)
         self.stable(cg(1), 30)
-        self.assertEqual(self.preview(30.16).strength_a, 30)
-        self.assertAlmostEqual(self.session.penalty_started, 30.16)
+        self.assertEqual(self.preview(30.16).strength_a, 0)
         self.observe(cg(1), 32.95)
-        self.assertEqual(self.preview(32.95).strength_a, 30)
+        self.assertEqual(self.preview(32.95).strength_a, 0)
         self.observe(cg(1), 33)
         self.assertEqual(self.preview(33).strength_a, 0)
         self.stable(cg(1), 40)
         self.assertEqual(self.preview(40.16).strength_a, 0)  # Never restart.
 
-    def test_automatic_pause_freezes_remaining_duration_instead_of_replaying_full_penalty(self):
-        self.begin(1)  # Starts at 1.16, duration 2.8 seconds.
+    def test_automatic_pause_does_not_manufacture_a_death_penalty(self):
+        self.begin(1)
         self.observe(cg(1), 2.16, allow=False)
         self.assertEqual(self.preview(2.16, allow=False).strength_a, 0)
         self.stable(cg(1), 50)
-        self.assertEqual(self.preview(50.16).strength_a, 30)
+        self.assertEqual(self.preview(50.16).strength_a, 0)
         self.observe(cg(1), 51.9)
-        self.assertEqual(self.preview(51.9).strength_a, 30)
+        self.assertEqual(self.preview(51.9).strength_a, 0)
         self.observe(cg(1), 52)
         self.assertEqual(self.preview(52).strength_a, 0)
 
-    def test_loading_gap_preserves_remaining_penalty_but_manual_pause_cancels_it(self):
+    def test_loading_and_manual_pause_never_create_a_scene_entry_penalty(self):
         self.begin(1)
         loading = {**cg(), "scene": "other", "stage": {"scene_change_playing": True}}
         self.observe(loading, 2, allow=False)
         self.assertEqual(self.preview(2, allow=False).strength_a, 0)
         self.stable(cg(1), 20)
-        self.assertEqual(self.preview(20.16).strength_a, 30)
+        self.assertEqual(self.preview(20.16).strength_a, 0)
         self.observe(cg(1), 20.2, allow=False, paused=True)
         self.stable(cg(1), 30)
         self.assertEqual(self.preview(30.16).strength_a, 0)
@@ -160,12 +220,12 @@ class DefeatSceneTests(unittest.TestCase):
         loading = {**cg(), "scene": "other", "stage": {"scene_change_playing": True}}
         self.observe(loading, 1, allow=False)
         self.stable(cg(), 2)
-        start = self.session.penalty_started
+        sequence = self.session.sequence
         subsequent = cg(1)
         subsequent["story"]["asset_name"] = "ADV/Scene3D_RiccaGhoul/Scene3D_RiccaGhoul02.csv"
         self.observe(subsequent, 10)
         self.assertEqual(self.preview(10).strength_a, 0)
-        self.assertEqual(self.session.penalty_started, start)
+        self.assertEqual(self.session.sequence, sequence)
         self.session.reset()
         self.observe(death(), 0, allow=False)
         self.stable(cg(0), 95)
@@ -188,13 +248,15 @@ class DefeatSceneTests(unittest.TestCase):
 
     def test_migration_preserves_old_death_customization_and_never_overwrites_new_rule(self):
         old = default_channel_policies()
-        old["A"]["rules"].pop("defeat_scene_enter")
+        old["A"]["rules"]["defeat_scene_enter"] = dict(custom_strength=90, wave="impact", duration=3)
         old["A"]["rules"].pop("defeat_interaction")
         old["A"]["rules"]["player_down"].update(custom_strength=22, wave="tap", duration=1.4)
         migrated = sanitize_channel_policies(old)
-        self.assertEqual(migrated["A"]["rules"]["defeat_scene_enter"]["custom_strength"], 22)
-        self.assertEqual(migrated["A"]["rules"]["defeat_scene_enter"]["wave"], "tap")
-        self.assertEqual(migrated["A"]["rules"]["defeat_scene_enter"]["duration"], 1.4)
+        self.assertNotIn("defeat_scene_enter", migrated["A"]["rules"])
+        self.assertEqual(migrated["A"]["rules"]["player_down"]["custom_strength"], 22)
+        self.assertEqual(migrated["A"]["rules"]["player_down"]["wave"], "tap")
+        self.assertEqual(migrated["A"]["rules"]["player_down"]["duration"], 1.4)
         self.assertIsNone(migrated["A"]["rules"]["defeat_interaction"]["duration"])
-        migrated["A"]["rules"]["defeat_scene_enter"]["custom_strength"] = 19
-        self.assertEqual(sanitize_channel_policies(migrated)["A"]["rules"]["defeat_scene_enter"]["custom_strength"], 19)
+        old["A"]["rules"].pop("player_down")
+        migrated = sanitize_channel_policies(old)
+        self.assertEqual(migrated["A"]["rules"]["player_down"]["custom_strength"], 90)

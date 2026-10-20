@@ -1,5 +1,6 @@
 """Render capture overview and editable rules with no game, socket or audio."""
 from pathlib import Path
+from copy import deepcopy
 import sys
 import tempfile
 import time
@@ -20,6 +21,7 @@ engine = QQmlApplicationEngine()
 temporary = tempfile.TemporaryDirectory(dir=project)
 config = ProductConfig(Path(temporary.name) / "settings.json")
 config.values["onboarding_completed"] = True
+original_a = deepcopy(config.values["channel_policies"]["A"])
 with patch("ricca_dglab.backend.ProductConfig", return_value=config), \
      patch("ricca_dglab.backend.enumerate_audio_devices", return_value=[]), \
      patch("ricca_dglab.backend.TelemetryWorker.start"):
@@ -100,7 +102,7 @@ def step_minimum():
 def step_rules():
     try:
         keys = [row["key"] for row in dialog.property("ruleRows").toVariant()]
-        assert "capture_start" in keys and "struggle" in keys
+        assert "struggle" in keys and "capture_start" not in keys, "Capture uses one sustained rule, not a duplicate entry pulse"
         choice = find("struggleStrengthChoice")
         choice.setProperty("currentIndex", 4)
         choice.activated.emit(4)
@@ -125,7 +127,7 @@ def step_saved():
         saved = ProductConfig(config.path).values["channel_policies"]
         rule = saved["B"]["rules"]["struggle"]
         assert (rule["custom_strength"], rule["duration"], rule["wave"]) == (13, None, "impact")
-        assert saved["A"]["mode"] == "hp"
+        assert saved["A"] == original_a
         backend._state["capture"].update(info_address="0x0", current_break_off_count=12.073,
                                           break_off_acceptance=False)
         backend.changed.emit()

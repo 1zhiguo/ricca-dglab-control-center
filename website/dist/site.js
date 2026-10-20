@@ -6,6 +6,9 @@
   try { language=localStorage.getItem('ricca-site-language')==='en'?'en':'zh'; } catch {}
   function applyRelease() {
     const release=window.RICCA_RELEASE||{urls:{}};
+    document.querySelectorAll('[data-release-sha]').forEach(node=>{
+      node.textContent=release.sha256||(language==='en'?'Checksum pending':'校验值待生成');
+    });
     const names={baidu:['百度网盘','Baidu Netdisk'],direct:['高速直链','Direct download'],github:['GitHub','GitHub']};
     document.querySelectorAll('[data-download]').forEach(link=>{
       const url=release.urls?.[link.dataset.download];

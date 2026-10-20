@@ -60,6 +60,6 @@ assert not list(DIST.rglob("*.jsonl")), "Telemetry must not be included in websi
 home = (DIST / "index.html").read_text(encoding="utf-8")
 order = [home.index(f'id="{name}"') for name in ("top", "features", "downloads", "screens", "support", "credits")]
 assert order == sorted(order), "Keep the Manaka reference's product/features/downloads/screens/support order"
-assert home.count("data-screenshot") == 4
+assert home.count("data-screenshot") == 6
 assert 'aria-controls="download-sources"' in home and 'id="download-sources" hidden' in home
 print("Website checks passed: pages, local links, anchors, images, headings, external links and package isolation.")

@@ -1,7 +1,7 @@
 """Defeat-to-CG evidence tracking and bounded, per-channel CG output.
 
 No game writes, audio capture, device connection, or persisted output permission.
-Opening a gallery/attaching inside a CG cannot manufacture a defeat transition.
+Catalogued gallery scenes can loop, but cannot manufacture a death penalty.
 """
 from __future__ import annotations
 
@@ -9,10 +9,11 @@ import math
 import re
 
 from .models import OutputPreview
+from .product_config import story_mode
 
 
 def scene_root(asset: object) -> str:
-    match = re.fullmatch(r"ADV/(Scene3D_[A-Za-z0-9_-]+)/[^/]+\.csv", str(asset or ""))
+    match = re.fullmatch(r"ADV/(Scene(?:3D|ANV)_[A-Za-z0-9_-]+)/[^/]+\.csv", str(asset or ""))
     return match.group(1) if match else ""
 
 
@@ -66,30 +67,18 @@ class DefeatSceneSession:
         self.witnessed_death = False
         self.root = ""
         self.phase = "idle"
-        self.entry_pending = False
-        self.penalty_cancelled = False
-        self.penalty_started = None
-        self.penalty_suspended_at = None
         self.updated = 0.0
         self.confirm_count = 0
         self.cut = ""
+        self.catalogued = False
 
     def cancel_pulses(self):
-        # Hard stops/config changes never queue a deferred punishment.
-        self.penalty_cancelled = True
-        self.entry_pending = False
-        self.penalty_started = None
-        self.penalty_suspended_at = None
-
-    def suspend_penalty(self, now: float):
-        """Automatic scene pauses freeze remaining time, never consume it."""
-        if self.penalty_started is not None and self.penalty_suspended_at is None:
-            self.penalty_suspended_at = now
+        # Scene entry never schedules a death cue; only DeathPenalty owns it.
+        self.confirm_count = 0
 
     def interrupt(self, now: float):
         # A transient scene read failure blocks output, not the witnessed death.
-        self.suspend_penalty(now)
-        self.confirm_count = 0
+        self.cancel_pulses()
 
     def record_death(self, state: dict, now: float):
         # Called only for EventDetector's validated same-actor positive -> zero
@@ -97,7 +86,8 @@ class DefeatSceneSession:
         self.witnessed_death = True
         self.pending_until = now + 90
 
-    def observe(self, state: dict, *, now: float, allow_story: bool, paused: bool):
+    def observe(self, state: dict, *, now: float, allow_story: bool, paused: bool,
+                registered_scenes=(), blocked_scenes=()):
         changes = []
         pid = state.get("process_id")
         if state.get("status") != "ok" and state.get("connected", True):
@@ -133,14 +123,48 @@ class DefeatSceneSession:
                 elif hp > 0.0001:
                     self.pending_root = ""
                     self.witnessed_death = False
-                    self.penalty_cancelled = False
             self.phase = "waiting" if self.pending_root or self.witnessed_death else "idle"
             return changes
         root = scene_root((state.get("story") or {}).get("asset_name"))
+        if root and root in blocked_scenes:
+            if self.root:
+                changes.append(("defeat_scene_end", "场景循环已停用", self.root))
+            self.reset()
+            return changes
+        if root in registered_scenes and state.get("scene") in {"adv", "atd", "anv"}:
+            if self.root != root:
+                if self.root:
+                    changes.append(("defeat_scene_end", "场景循环结束", self.root))
+                self.reset()
+                self.pid, self.updated, self.root = pid, now, root
+                self.catalogued = True
+                self.sequence += 1
+                changes.append(("defeat_scene_enter", "进入已登记剧情场景", root))
+            self.catalogued = True
+            atd = state.get("atd") or {}
+            old = self.phase
+            self.cut = str(atd.get("cut_name") or "")
+            self.phase = "interaction" if atd.get("playing_adv_state") == 0 else "dialogue"
+            if self.phase != old:
+                changes.append(("defeat_phase", "剧情场景阶段变化", self.phase + " · " + self.cut))
+            if paused:
+                self.cancel_pulses()
+            if allow_story and not paused:
+                self.confirm_count += 1
+            else:
+                self.confirm_count = 0
+                self.cancel_pulses()
+            return changes
+        if self.catalogued:
+            # Leaving the exact catalogue ID stops output immediately, including
+            # gallery/menu transitions carrying an obsolete resource string.
+            changes.append(("defeat_scene_end", "场景循环结束", self.root))
+            self.reset()
+            return changes
         if state.get("scene") != "atd" or not root:
             # Allow bounded loading gaps, but never output during the gap.
             if stage.get("scene_change_playing") or stage.get("all_resource_loaded") is False:
-                self.suspend_penalty(now)
+                self.cancel_pulses()
                 self.confirm_count = 0
                 self.phase = "loading"
             else:
@@ -157,7 +181,6 @@ class DefeatSceneSession:
                 return changes
             self.root = root
             self.pending_root = ""
-            self.entry_pending = not self.penalty_cancelled
             self.sequence += 1
             changes.append(("defeat_scene_enter", "进入败北场景", root))
         atd = state.get("atd") or {}
@@ -181,42 +204,32 @@ class DefeatSceneSession:
             self.confirm_count += 1
         else:
             self.confirm_count = 0
-            self.suspend_penalty(now)
-        if self.confirm_count >= 3 and self.penalty_suspended_at is not None:
-            self.penalty_started += max(0.0, now - self.penalty_suspended_at)
-            self.penalty_suspended_at = None
-        if not paused and allow_story and self.entry_pending and known and self.confirm_count >= 3:
-            self.entry_pending = False
-            self.penalty_started = now
+            self.cancel_pulses()
         return changes
 
     def preview(self, policies: dict, strengths: dict, cap: int, *, now: float, allow: bool,
                 allow_loop: bool = True) -> OutputPreview:
         if (not allow or not self.root or self.confirm_count < 3
-                or self.penalty_suspended_at is not None or not 0 <= now - self.updated < 0.5):
+                or not 0 <= now - self.updated < 0.5):
             return OutputPreview(reason="defeat-scene-blocked")
         values = []
-        penalty = False
         for channel in ("A", "B"):
             policy = policies[channel]
             best, wave = 0.0, "idle"
             if policy["mode"] != "off" and self.phase not in {"unknown", "loading", "unconfirmed"}:
                 rules = policy["rules"]
                 for key, active in (
-                    ("defeat_scene_enter", self.penalty_started is not None and
-                     0 <= now - self.penalty_started < rules["defeat_scene_enter"]["duration"]),
-                    ("defeat_interaction", self.phase == "interaction" and allow_loop),
+                    ("defeat_interaction", (self.catalogued or self.phase == "interaction") and allow_loop),
                 ):
                     rule = rules[key]
+                    if key == "defeat_interaction" and story_mode(policy) != "fixed":
+                        continue  # Queue scheduling is separately gated in the backend.
                     if active and rule["enabled"]:
                         strength = min(cap, max(0, rule["custom_strength"] if rule["custom_strength"] is not None else strengths[rule["tier"]]))
                         if strength > best:
                             best, wave = float(strength), rule["wave"]
-                        if key == "defeat_scene_enter" and strength > 0:
-                            penalty = True
-                            break  # Death outranks other feedback, not just its numeric strength.
             values.extend((best, wave))
-        return OutputPreview(*values, "defeat-penalty" if penalty else "defeat-interaction")
+        return OutputPreview(*values, "defeat-interaction")
 
     def token(self, channel: str) -> str:
         return f"defeat:{self.pid}:{self.root}:{self.sequence}:{channel}"

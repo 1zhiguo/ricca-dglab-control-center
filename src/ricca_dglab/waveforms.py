@@ -102,6 +102,9 @@ PRESETS: dict[str, WaveformPreset] = {
     "death_penalty": WaveformPreset("death_penalty", "死亡惩罚", "双通道单次重惩罚包络", "Ricca 共感", "#ff315d", tuple(
         _frame(72, amplitude) for amplitude in (20, 55, 100, 82, 45, 18, 0, 40, 85, 100, 64, 28, 0, 0)
     )),
+    "death_ramp": WaveformPreset("death_ramp", "死亡惩罚·渐强", "沿用实机验证的自定义包络；不提高设备强度", "Ricca 共感", "#d59a78", tuple(
+        _frame(72, amplitude) for amplitude in (26, 60, 81, 92, 94, 93, 93, 89, 83, 76, 67, 58, 44, 29, 11, 0)
+    )),
 }
 
 WAVEFORMS: dict[str, tuple[str, ...]] = {

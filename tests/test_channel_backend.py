@@ -12,9 +12,463 @@ from ricca_dglab.product_config import ProductConfig, default_channel_policies
 
 
 class ChannelBackendTests(unittest.TestCase):
+    def test_wave_catalog_cache_reuses_static_data_and_tracks_library_changes(self):
+        backend = self.backend
+        from ricca_dglab.waveforms import waveform_catalog
+        backend._wave_catalog_cache = None
+        with patch("ricca_dglab.backend.waveform_catalog", wraps=waveform_catalog) as build:
+            first = backend._wave_catalog()
+            for _ in range(100):
+                self.assertIs(backend._wave_catalog(), first)
+            self.assertEqual(build.call_count, 1)
+            backend._custom_waveforms.append(dict(key="custom:cache-test",name="cache",points=[10]*16,
+                                                  frequency=80,source="custom",color="#ffffff"))
+            changed = backend._wave_catalog()
+            self.assertEqual(build.call_count, 2)
+            self.assertEqual(changed[-1]["key"], "custom:cache-test")
+            backend._custom_waveforms[-1]["points"][0] = 90
+            self.assertEqual(backend._wave_catalog()[-1]["points"][0], 90)
+            self.assertEqual(build.call_count, 3)
+            backend._custom_waveforms.clear()
+            self.assertNotIn("custom:cache-test", [wave["key"] for wave in backend._wave_catalog()])
+
+    def test_memory_optimization_keeps_detection_and_output_cadence(self):
+        import inspect
+        from ricca_dglab.backend import TelemetryWorker
+        self.assertEqual(self.backend._timer.interval(), 33)
+        self.assertEqual(inspect.signature(TelemetryWorker.__init__).parameters["interval"].default, .075)
+
+    def test_story_choice_persists_independently_and_queue_editor_keeps_audio(self):
+        from copy import deepcopy
+        backend = self.backend
+        original_b = deepcopy(backend.channelPolicies["B"])
+        policy = deepcopy(backend.channelPolicies["A"])
+        policy["story_mode"] = "fixed_audio"
+        self.assertTrue(backend.saveChannelPolicy("A", policy))
+        self.assertEqual(backend.channelPolicies["B"], original_b)
+        self.assertEqual(backend.channelPolicies["A"]["mode"], "both")
+        self.assertTrue(backend.saveStoryQueue("A", [{"wave":"tap", "duration":1, "custom_strength":12}], True))
+        self.assertEqual(backend.channelPolicies["A"]["story_mode"], "queue_audio")
+        self.assertTrue(backend.saveStoryQueue("A", backend.storyQueues["A"], False))
+        self.assertEqual(backend.channelPolicies["A"]["story_mode"], "fixed_audio")
+        restored = ProductConfig(backend._config.path).values
+        self.assertEqual(restored["channel_policies"]["A"]["story_mode"], "fixed_audio")
+        self.assertFalse(restored["audio_empathy_enabled"])
+
+    def test_explicit_story_modes_are_independent_for_both_channels(self):
+        from copy import deepcopy
+        from test_scene_library import anv
+        backend = self.backend
+        backend._bridge = MagicMock()
+        backend._device_connected = True
+        backend._config.values["audio_empathy_enabled"] = True
+        backend._config.values["story_queues"] = {ch: [
+            {"wave":"impact", "duration":1, "tier":"low", "custom_strength":20},
+            {"wave":"tap", "duration":1, "tier":"low", "custom_strength":10}]
+            for ch in ("A", "B")}
+        now = 10
+        for mode, expected, wave in (("fixed", 18, "tap"), ("queue", 20, "impact"),
+                                     ("audio", 9, "audio-reactive"), ("fixed_audio", 9, "tap"),
+                                     ("queue_audio", 10, "impact"), ("off", 0, "idle")):
+            for channel in ("A", "B"):
+                policy = deepcopy(backend.channelPolicies[channel])
+                # A story choice overrides the old coupled action_audio mode;
+                # B story audio must also work when its battle source is HP.
+                policy.update(mode="action_audio" if channel == "A" else "hp", story_mode=mode)
+                policy["rules"]["defeat_interaction"].update(custom_strength=18, wave="tap", enabled=True)
+                self.assertTrue(backend.saveChannelPolicy(channel, policy))
+            backend._story_queue_player.reset()
+            def feed(t, audio=True, state=None):
+                with patch("ricca_dglab.backend.time.monotonic", return_value=t):
+                    backend._apply_state({"state":state or anv(), "received_at":t, "latency_ms":1})
+                    backend._audio_last_sample = t if audio else t - 1
+                    backend._audio_strength, backend._audio_level = backend.hardCap / 2, 70
+                    backend._drain()
+            for offset in (0, .1, .2): feed(now + offset)
+            self.assertEqual((backend.previewA, backend.previewB), (expected, expected), mode)
+            self.assertEqual((backend.waveA, backend.waveB), (wave, wave), mode)
+            if "audio" in mode:
+                feed(now + .3, audio=False)
+                self.assertEqual((backend.previewA, backend.previewB), (0, 0), mode)
+                backend._config.values["audio_empathy_enabled"] = False
+                feed(now + .4)
+                self.assertEqual((backend.previewA, backend.previewB), (0, 0), mode)
+                backend._config.values["audio_empathy_enabled"] = True
+            backend.toggleOutputPause()
+            feed(now + .5)
+            self.assertEqual((backend.previewA, backend.previewB), (0, 0), mode)
+            backend.toggleOutputPause()
+            feed(now + .6, state=dict(anv(), scene="other"))
+            self.assertEqual((backend.previewA, backend.previewB), (0, 0), mode)
+            now += 10
+        restored = ProductConfig(backend._config.path).values["channel_policies"]
+        self.assertEqual((restored["A"]["mode"], restored["B"]["mode"]), ("action_audio", "hp"))
+        self.assertEqual(restored["A"]["story_mode"], "off")
+
+    def enable_hybrid_audio_fixture(self):
+        from copy import deepcopy
+        backend = self.backend
+        backend._bridge = MagicMock()
+        backend._device_connected = True
+        policy = deepcopy(backend.channelPolicies["B"])
+        policy["mode"] = "action_audio"
+        self.assertTrue(backend.saveChannelPolicy("B",policy))
+        backend._config.values["audio_empathy_enabled"] = True
+        self.assertTrue(backend.saveStoryQueue("B",[
+            {"wave":"tap","duration":1,"custom_strength":20},
+            {"wave":"impact","duration":1,"custom_strength":10}],True))
+        return backend
+
+    def test_hybrid_audio_modulates_queue_only_in_story_and_silence_keeps_time(self):
+        from test_scene_library import anv
+        backend = self.enable_hybrid_audio_fixture()
+        state = anv()
+        state["story"]["asset_name"] = "ADV/SceneANV_UnlistedAudio/test.csv"
+        def feed(now,gain):
+            with patch("ricca_dglab.backend.time.monotonic",return_value=now):
+                backend._apply_state({"state":state,"received_at":now,"latency_ms":1})
+                backend._audio_last_sample = now
+                backend._audio_strength = backend.hardCap*gain
+                backend._audio_level = 70 if gain else 0
+                backend._drain()
+        feed(10,.5)
+        self.assertEqual(backend.previewB,10)
+        self.assertEqual(backend.waveB,"tap")
+        feed(10.2,1)
+        self.assertEqual(backend.previewB,20)
+        before = backend._story_queue_player.elapsed["B"]
+        feed(10.4,0)
+        self.assertEqual(backend.previewB,0)
+        self.assertGreater(backend._story_queue_player.elapsed["B"],before)
+        for now in (10.6,10.8,11,11.1): feed(now,.5)
+        self.assertEqual(backend.waveB,"impact")
+        self.assertEqual(backend.previewB,5)
+        self.assertEqual(backend.priorityOutputStatus,"剧情音频")
+        self.assertEqual(backend.audioPulseStrength,5)
+        backend.toggleOutputPause()
+        feed(11.2,1)
+        self.assertEqual(backend.previewB,0)
+        elapsed = backend._story_queue_player.elapsed["B"]
+        feed(20,1)
+        self.assertEqual(backend._story_queue_player.elapsed["B"],elapsed)
+        backend.toggleOutputPause()
+        feed(20.1,.5)
+        self.assertEqual(backend.previewB,5)
+
+    def test_hybrid_loud_battle_audio_is_ignored_but_actions_still_work(self):
+        from test_core import gameplay
+        from ricca_dglab.models import GameEvent
+        backend = self.enable_hybrid_audio_fixture()
+        for now in (1,1.1,1.2,1.3,1.4,1.5):
+            with patch("ricca_dglab.backend.time.monotonic",return_value=now):
+                backend._apply_state({"state":gameplay(process_id=42),"received_at":now,"latency_ms":1})
+                backend._audio_last_sample = now
+                backend._audio_level = 100
+                backend._audio_strength = backend.hardCap
+                backend._drain()
+        self.assertEqual(backend.previewB,0)
+        self.assertFalse(backend.storyQueueStatus["B"]["playing"])
+        backend._mapping.accept([GameEvent(100,1.5,"now","action","hit",data={"action":"stand_damage"})])
+        with patch("ricca_dglab.backend.time.monotonic",return_value=1.51): backend._drain()
+        self.assertGreater(backend.previewB,0)
+        self.assertEqual(backend.waveB,"impact")
+
+    def test_hybrid_requires_fresh_audio_and_master_switch_even_under_engine_pause(self):
+        from test_scene_library import anv
+        backend = self.enable_hybrid_audio_fixture()
+        state = dict(anv(),is_paused=True,pause_mask=1)
+        state["story"]["act_screen_paused"] = True
+        with patch("ricca_dglab.backend.time.monotonic",return_value=10):
+            backend._apply_state({"state":state,"received_at":10,"latency_ms":1})
+        with patch("ricca_dglab.backend.time.monotonic",return_value=10.1):
+            backend._apply_audio_sample({"rms":1,"peak":1,"received_at":10.1})
+            backend._drain()
+        self.assertGreater(backend.previewB,0)
+        self.assertEqual(backend.waveB,"tap")
+        with patch("ricca_dglab.backend.time.monotonic",return_value=10.5):
+            backend._apply_state({"state":state,"received_at":10.5,"latency_ms":1})
+            backend._drain()
+        self.assertEqual(backend.previewB,0)
+        backend._config.values["audio_empathy_enabled"] = False
+        with patch("ricca_dglab.backend.time.monotonic",return_value=10.6):
+            backend._audio_last_sample = 10.6
+            backend._audio_strength = 30
+            backend._audio_level = 100
+            backend._drain()
+        self.assertEqual(backend.previewB,0)
+
+    def test_story_queue_save_advance_rest_pause_resume_death_priority_and_exit(self):
+        from test_scene_library import anv
+        from test_story_queue import steps
+        backend = self.backend
+        backend._bridge = MagicMock()
+        backend._device_connected = True
+        self.assertTrue(backend.saveStoryQueue("A",steps(),True))
+        self.assertEqual(backend.channelPolicies["A"]["rules"]["defeat_interaction"]["playback"],"queue")
+        def feed(now, state=None):
+            with patch("ricca_dglab.backend.time.monotonic",return_value=now):
+                backend._apply_state({"state":anv() if state is None else state,"received_at":now,"latency_ms":1})
+                backend._drain()
+        for now in (10,10.1,10.2): feed(now)
+        self.assertEqual(backend.previewA,12)
+        for now in (10.4,10.6,10.8,11): feed(now)
+        backend._config.values["audio_empathy_enabled"] = True
+        backend._config.values["channel_policies"]["A"]["mode"] = "audio"
+        backend._audio_strength = 25
+        backend._audio_last_sample = 11.2
+        feed(11.2)
+        self.assertEqual(backend.previewA,0)  # Queue owns this channel during rest, even over audio.
+        for now in (11.4,11.6,11.8): feed(now)
+        self.assertEqual(backend.previewA,15)
+        elapsed = backend._story_queue_player.elapsed["A"]
+        backend.toggleOutputPause()
+        feed(12)
+        backend._bridge.set_auto_enabled.assert_called_with(False)
+        feed(20)
+        self.assertEqual(backend._story_queue_player.elapsed["A"],elapsed)
+        backend.toggleOutputPause()
+        feed(20.1)
+        self.assertEqual(backend.previewA,15)
+        for policy in backend._config.values["channel_policies"].values():
+            policy["rules"]["player_down"]["custom_strength"] = 2
+        backend._death_penalty.trigger(anv(),backend.channelPolicies,now=20.1,sequence=900)
+        feed(20.2)
+        self.assertEqual(backend.previewA,2)  # Death priority, not numerically stronger loop.
+        self.assertEqual(backend._story_queue_player.elapsed["A"],elapsed)
+        backend._death_penalty.cancel()
+        feed(20.3)
+        self.assertEqual(backend.previewA,15)
+        feed(20.4,dict(anv(),scene="other"))
+        self.assertEqual(backend.previewA,0)
+        for now in (21,21.1,21.2): feed(now)
+        self.assertEqual(backend.previewA,12)
+        self.assertEqual(backend.storyQueueStatus["A"]["index"],1)
+
+    def test_story_queue_rejects_invalid_and_retains_settings_on_failure(self):
+        from copy import deepcopy
+        backend = self.backend
+        original = deepcopy(backend._config.values)
+        for invalid in ([],[{"wave":"missing-wave","duration":1}],[{"wave":"story-queue","duration":1}]):
+            self.assertFalse(backend.saveStoryQueue("A",invalid,True))
+            self.assertEqual(backend._config.values,original)
+        self.assertFalse(backend.saveStoryQueue("X",[{"wave":"tap","duration":1}],True))
+        with patch.object(backend._config,"save",side_effect=OSError("disk full")):
+            self.assertFalse(backend.saveStoryQueue("A",[{"wave":"tap","duration":1}],True))
+        self.assertEqual(backend._config.values,original)
+
+    def test_story_queue_respects_disabled_rules_cap_and_no_device_clock_freeze(self):
+        from test_scene_library import anv
+        backend = self.backend
+        backend._bridge = MagicMock()
+        backend._device_connected = True
+        self.assertTrue(backend.saveStoryQueue("A",[{"wave":"tap","duration":1,"custom_strength":99}],True))
+        def feed(now):
+            with patch("ricca_dglab.backend.time.monotonic",return_value=now):
+                backend._apply_state({"state":anv(),"received_at":now,"latency_ms":1})
+                backend._drain()
+        for now in (1,1.1,1.2): feed(now)
+        self.assertEqual(backend.previewA,backend.hardCap)
+        backend._config.values["channel_policies"]["A"]["rules"]["defeat_interaction"]["enabled"] = False
+        feed(1.3)
+        self.assertEqual(backend.previewA,0)
+        backend._config.values["channel_policies"]["A"]["rules"]["defeat_interaction"]["enabled"] = True
+        backend._device_connected = False
+        before = backend._story_queue_player.elapsed["A"]
+        for now in (1.4,1.6,1.8): feed(now)
+        self.assertEqual(backend._story_queue_player.elapsed["A"],before)
+        backend._bridge.set_auto_enabled.assert_called_with(False)
+
+    def test_missing_queue_wave_is_silent_and_clears_channel_output(self):
+        from test_scene_library import anv
+        backend = self.backend
+        backend._bridge = MagicMock()
+        backend._device_connected = True
+        self.assertTrue(backend.saveStoryQueue("A",[{"wave":"tap","duration":1,"custom_strength":20}],True))
+        backend._config.values["story_queues"]["A"][0]["wave"] = "custom:removed-from-disk"
+        for _ in range(3):
+            backend._apply_state({"state":anv(),"received_at":time.monotonic(),"latency_ms":1})
+            backend._drain()
+        self.assertEqual(backend.previewA,0)
+        self.assertTrue(backend.storyQueueStatus["A"]["missing_wave"])
+        self.assertEqual(backend._bridge.update_auto_outputs.call_args.args[0],0)
+        self.assertEqual(backend._bridge.update_auto_outputs.call_args.args[1],())
+
+    def test_in_process_batch_registration_fixes_legacy_allowlist_and_preserves_profile(self):
+        from copy import deepcopy
+        from ricca_dglab.scene_catalog import COLLECTED_SCENE_IDS
+        from test_scene_library import anv
+        backend = self.backend
+        backend._bridge = MagicMock()
+        backend._device_connected = True
+        backend._config.values["scene_catalog"] = ["Scene3D_RiccaGhoul"]
+        def feed():
+            backend._apply_state({"state": anv(), "received_at": time.monotonic(), "latency_ms": 1})
+            backend._drain()
+        for _ in range(3): feed()
+        self.assertEqual(backend.previewA, 0)
+        backend.toggleOutputPause()
+        original = deepcopy(backend._config.values)
+        self.assertTrue(backend.registerCollectedScenes())
+        self.assertEqual(backend.registeredSceneCount, 34)
+        self.assertTrue(backend.userOutputPaused)
+        saved = ProductConfig(backend._config.path).values
+        self.assertEqual(set(saved["scene_catalog"]), set(COLLECTED_SCENE_IDS))
+        original.pop("scene_catalog"); saved.pop("scene_catalog")
+        self.assertEqual(saved, original)
+        for _ in range(3): feed()
+        self.assertEqual(backend.previewA, 0)
+        backend.toggleOutputPause()
+        feed()
+        self.assertGreater(backend.previewA, 0)
+
+    def test_failed_batch_registration_does_not_change_running_allowlist(self):
+        backend = self.backend
+        backend._config.values["scene_catalog"] = []
+        with patch.object(backend._config, "save", side_effect=OSError("test disk error")):
+            self.assertFalse(backend.registerCollectedScenes())
+        self.assertEqual(backend.registeredSceneCount, 0)
+
+    def test_scene_capture_is_documentation_only_until_explicit_enable_and_preserves_pause(self):
+        from test_scene_library import anv
+        backend = self.backend
+        backend._config.values["scene_catalog"] = []  # A future unregistered discovery.
+        backend._bridge = MagicMock()
+        backend._device_connected = True
+        def feed():
+            backend._apply_state({"state": anv(), "received_at": time.monotonic(), "latency_ms": 1})
+            backend._drain()
+        for _ in range(3): feed()
+        self.assertEqual(backend.previewA, 0)
+        self.assertFalse(backend.sceneCaptureEnabled)
+        backend.setSceneCaptureEnabled(True)
+        feed()
+        root = "SceneANV_RiccaClaretMp"
+        self.assertEqual(backend.sceneLibrary[0]["id"], root)
+        self.assertNotIn(root, backend._config.values["scene_catalog"])
+        self.assertEqual(backend.previewA, 0)
+        self.assertTrue(backend.recordCurrentScene())
+        self.assertTrue(backend.saveSceneNote(root, "ANV 测试"))
+        self.assertEqual(len(backend.sceneLibrary), 1)
+        backend.toggleOutputPause()
+        self.assertTrue(backend.setSceneLoopEnabled(root, True))
+        for _ in range(3): feed()
+        self.assertTrue(backend.userOutputPaused)
+        self.assertEqual(backend.previewA, 0)
+        backend.toggleOutputPause()
+        feed()
+        self.assertGreater(backend.previewA, 0)
+        self.assertTrue(backend.setSceneLoopEnabled(root, False))
+        feed()
+        self.assertEqual(backend.previewA, 0)
+        self.assertFalse(backend.setSceneLoopEnabled("Scene3D_Unseen", True))
+
+    def test_catalogue_gallery_dialogue_autostarts_plugin_pause_resume_and_exit(self):
+        from test_defeat_scene import cg
+        backend = self.backend
+        backend._bridge = MagicMock()
+        backend._device_connected = True
+        state = cg(1)  # No HP edge, no candidate hint, no interactive ATD fields.
+        state["atd"] = {}
+        state["story"]["act_screen_paused"] = True
+        state.update(is_paused=True, pause_mask=1)
+
+        def feed(current):
+            backend._apply_state({"state": current, "received_at": time.monotonic(), "latency_ms": 1})
+            backend._drain()
+
+        for _ in range(3):
+            feed(state)
+        self.assertTrue(backend._defeat_scene.catalogued)
+        self.assertEqual(backend.previewA, backend.mediumStrength)
+        self.assertEqual(backend.priorityOutputStatus, "场景循环")
+        self.assertFalse(hasattr(backend._defeat_scene, "penalty_started"))
+        self.assertEqual(backend._death_penalty.sequence, 0)
+        backend._bridge.set_auto_enabled.assert_called_with(True)
+        backend._bridge.set_paused.assert_called_with(False)
+        backend.toggleOutputPause()
+        backend._bridge.set_paused.assert_called_with(True)  # Immediate, before next read.
+        feed(state)
+        self.assertEqual(backend.previewA, 0)
+        backend._bridge.set_auto_enabled.assert_called_with(False)
+        backend.toggleOutputPause()
+        feed(state)
+        self.assertEqual(backend.previewA, backend.mediumStrength)
+        feed(dict(state, game_ui={"is_user_pause": True}))
+        self.assertEqual(backend.previewA, 0)
+        feed(state)
+        self.assertEqual(backend.previewA, backend.mediumStrength)
+        backend.emergencyStop()
+        for _ in range(3):
+            feed(state)
+        backend._bridge.set_auto_enabled.assert_called_with(False)
+        backend.toggleOutputPause()
+        for _ in range(3):
+            feed(state)
+        self.assertEqual(backend.previewA, backend.mediumStrength)
+        feed(dict(state, scene="other"))  # Stale resource string on a menu is not an active CG.
+        self.assertEqual(backend.previewA, 0)
+        self.assertFalse(backend._defeat_scene.root)
+
+    def test_catalogue_does_not_bypass_hard_gates_and_logs_new_scene_ids(self):
+        from test_defeat_scene import cg
+        backend = self.backend
+        backend._bridge = MagicMock()
+        backend._device_connected = True
+        def feed(state):
+            backend._apply_state({"state": state, "received_at": time.monotonic(), "latency_ms": 1})
+            backend._drain()
+        for _ in range(3):
+            feed(cg(1))
+        for field, value in (("hard_cap", 0), ("onboarding_completed", False)):
+            original = backend._config.values[field]
+            backend._config.values[field] = value
+            feed(cg(1))
+            backend._bridge.set_auto_enabled.assert_called_with(False)
+            backend._config.values[field] = original
+        for state in (dict(cg(1), build_supported=False),
+                      dict(cg(1), status="error"),
+                      dict(cg(1), stage={"scene_change_playing": True})):
+            feed(state)
+            backend._bridge.set_auto_enabled.assert_called_with(False)
+        for _ in range(3):
+            feed(cg(1))
+        backend._queue.put(("telemetry_error", {"detail": "test read gap"}))
+        backend._drain()
+        backend._bridge.set_auto_enabled.assert_called_with(False)
+        for _ in range(3):
+            feed(cg(1))
+        with patch("ricca_dglab.backend.audit.record") as log:
+            unknown = cg(1)
+            unknown["story"]["asset_name"] = "ADV/Scene3D_NewScene/test.csv"
+            feed(unknown)
+            self.assertEqual(backend.previewA, 0)
+            records = [call.kwargs for call in log.call_args_list if call.args[0] == "scene.observed"]
+            self.assertEqual(records[-1]["scene_root"], "Scene3D_NewScene")
+            self.assertFalse(records[-1]["registered"])
+
+    def test_death_audit_explains_onboarding_block_and_keeps_gates_enforced(self):
+        from test_defeat_scene import death
+        backend=self.backend
+        backend._bridge=MagicMock()
+        backend._device_connected=True
+        backend._config.values['onboarding_completed']=False
+        with patch('ricca_dglab.backend.audit.record') as log:
+            now=time.monotonic()
+            backend._apply_state({'state':dict(death(),current_hp=31,max_hp=31),'received_at':now,'latency_ms':1})
+            backend._apply_state({'state':dict(death(),max_hp=31),'received_at':now+0.01,'latency_ms':1})
+            backend._drain()
+            detected=[call.kwargs for call in log.call_args_list if call.args and call.args[0]=='death.detected']
+            self.assertEqual(len(detected),1)
+            self.assertIn('onboarding-incomplete',detected[0]['trigger_blockers'])
+            self.assertFalse(detected[0]['scheduled'])
+            gates=[call.kwargs for call in log.call_args_list if call.args and call.args[0]=='output.gate']
+            self.assertIn('onboarding-incomplete',gates[-1]['blockers'])
+            backend._bridge.set_auto_enabled.assert_called_with(False)
+
     def test_current_interaction_takeover_is_explicit_and_never_invents_a_death_penalty(self):
         from test_defeat_scene import cg
         backend = self.backend
+        backend._config.values["scene_catalog"] = []  # Uncatalogued fallback remains opt-in.
         backend._bridge = MagicMock()
         backend._device_connected = True
         state = cg(0)
@@ -29,7 +483,7 @@ class ChannelBackendTests(unittest.TestCase):
             backend._apply_state({"state": state, "received_at": time.monotonic(), "latency_ms": 1})
             backend._drain()
         self.assertEqual(backend.previewA, backend.mediumStrength)
-        self.assertIsNone(backend._defeat_scene.penalty_started)
+        self.assertFalse(hasattr(backend._defeat_scene, "penalty_started"))
         self.assertEqual(backend.priorityOutputStatus, "败北互动")
         backend.emergencyStop()
         backend._defeat_scene.reset()
@@ -107,15 +561,20 @@ class ChannelBackendTests(unittest.TestCase):
     def test_story_pause_does_not_block_death_penalty_and_does_not_replay_it(self):
         from test_defeat_scene import death, cg
         backend = self.backend
+        backend._config.values["scene_catalog"] = []  # Legacy defeat-only path.
         backend._bridge = MagicMock()
         backend._device_connected = True
+        for policy in backend._config.values["channel_policies"].values():
+            policy["rules"]["player_down"]["duration"] = 10
+        backend._refresh_mapping_config()
 
         def feed(state, now):
             with patch("ricca_dglab.backend.time.monotonic", return_value=now):
                 backend._apply_state({"state": state, "received_at": now, "latency_ms": 1})
                 backend._drain()
 
-        feed(death(), 10)
+        feed(dict(death(), current_hp=31, max_hp=31), 9)
+        feed(dict(death(), max_hp=31), 10)
         paused = cg(1)
         paused["story"]["act_screen_paused"] = True
         feed(paused, 11)
@@ -126,9 +585,9 @@ class ChannelBackendTests(unittest.TestCase):
         backend._bridge.set_paused.assert_called_with(False)
         self.assertFalse(backend.outputPaused)
         self.assertEqual(backend.priorityOutputStatus, "死亡惩罚")
-        feed(paused, 13.9)
+        feed(paused, 19.9)
         self.assertEqual(backend.previewA, backend.deathStrength)
-        feed(paused, 14.1)
+        feed(paused, 20.1)
         self.assertEqual(backend.previewA, 0)
         backend._bridge.set_auto_enabled.assert_called_with(False)
         for now in (41, 41.1, 41.2):
@@ -138,16 +597,18 @@ class ChannelBackendTests(unittest.TestCase):
     def test_ordinary_manual_pause_cannot_cancel_death_but_emergency_can(self):
         from test_defeat_scene import death, cg
         backend = self.backend
+        backend._config.values["scene_catalog"] = []  # Legacy defeat-only path.
         backend._bridge = MagicMock()
         backend._device_connected = True
         now = time.monotonic()
-        backend._apply_state({"state": death(), "received_at": now, "latency_ms": 1})
+        backend._apply_state({"state": dict(death(), current_hp=31, max_hp=31), "received_at": now, "latency_ms": 1})
+        backend._apply_state({"state": dict(death(), max_hp=31), "received_at": now, "latency_ms": 1})
         state = cg(1)
         state["story"]["act_screen_paused"] = True
         backend._apply_state({"state": state, "received_at": now, "latency_ms": 1})
-        self.assertTrue(backend._defeat_scene.entry_pending)
+        self.assertFalse(hasattr(backend._defeat_scene, "entry_pending"))
         backend.toggleOutputPause()
-        self.assertTrue(backend._defeat_scene.entry_pending)
+        self.assertFalse(hasattr(backend._defeat_scene, "entry_pending"))
         for _ in range(3):
             backend._apply_state({"state": cg(1), "received_at": time.monotonic(), "latency_ms": 1})
             backend._drain()
@@ -188,7 +649,7 @@ class ChannelBackendTests(unittest.TestCase):
         backend.toggleOutputPause()
         feed(dict(cg(0), is_paused=True, pause_mask=1), 14.1)
         self.assertEqual(backend.previewA, backend.mediumStrength)
-        self.assertEqual(backend.priorityOutputStatus, "败北互动")
+        self.assertEqual(backend.priorityOutputStatus, "场景循环")
         backend._bridge.set_paused.assert_called_with(False)
         backend.emergencyStop()
         feed(cg(0), 14.2)
@@ -198,6 +659,7 @@ class ChannelBackendTests(unittest.TestCase):
     def test_scene_read_gap_preserves_death_evidence_and_loop_requires_fresh_confirmation(self):
         from test_defeat_scene import death, cg
         backend = self.backend
+        backend._config.values["scene_catalog"] = []  # Legacy defeat-only path.
         backend._bridge = MagicMock()
         backend._device_connected = True
         backend._apply_state({"state": death(), "received_at": time.monotonic(), "latency_ms": 1})
@@ -208,7 +670,7 @@ class ChannelBackendTests(unittest.TestCase):
         for _ in range(3):
             backend._apply_state({"state": cg(0), "received_at": time.monotonic(), "latency_ms": 1})
             backend._drain()
-        self.assertEqual(backend.previewA, backend.deathStrength)
+        self.assertEqual(backend.previewA, backend.mediumStrength)  # No witnessed HP edge, no death cue.
         backend._queue.put(("telemetry_error", {"detail": "one failed read"}))
         backend._drain()
         backend._bridge.set_auto_enabled.assert_called_with(False)
@@ -231,7 +693,7 @@ class ChannelBackendTests(unittest.TestCase):
             backend._apply_state({"state": cg(0), "received_at": time.monotonic(), "latency_ms": 1})
             backend._drain()
         self.assertEqual(backend.previewA, backend.mediumStrength)
-        self.assertEqual(backend.priorityOutputStatus, "败北互动")
+        self.assertEqual(backend.priorityOutputStatus, "场景循环")
 
     def ready_device(self):
         from test_capture import snapshot
@@ -330,6 +792,7 @@ class ChannelBackendTests(unittest.TestCase):
     def test_defeat_scene_zero_hp_gate_entry_loop_dialogue_and_manual_stop(self):
         from test_defeat_scene import death, cg
         backend = self.backend
+        backend._config.values["scene_catalog"] = []  # Legacy defeat-only path.
         backend._bridge = MagicMock()
         backend._output_armed = True
         backend._device_connected = True
@@ -345,11 +808,11 @@ class ChannelBackendTests(unittest.TestCase):
         self.assertEqual((backend.previewA, backend.previewB), (0, 0))
         for now in (10.1, 10.2, 10.3):
             feed(cg(1), now)
-        self.assertEqual(backend.previewA, backend.deathStrength)
-        backend._bridge.set_auto_enabled.assert_called_with(True)
+        self.assertEqual(backend.previewA, 0)  # Initial HP zero is not a death edge.
+        backend._bridge.set_auto_enabled.assert_called_with(True)  # Armed, but no cue to send.
         kwargs = backend._bridge.update_auto_outputs.call_args.kwargs
         self.assertEqual(kwargs["hard_cap"], 30)
-        self.assertIn("defeat:", kwargs["wave_key_a"])
+        self.assertEqual(kwargs["wave_key_a"], "idle:idle")
         feed(cg(0), 15)
         self.assertEqual(backend.previewA, backend.mediumStrength)
         with patch("ricca_dglab.backend.time.monotonic", return_value=15):
@@ -597,6 +1060,13 @@ class ChannelBackendTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(dir=Path.cwd())
         config = ProductConfig(Path(self.temp.name) / "settings.json")
         config.values["onboarding_completed"] = True
+        config.values["channel_policies"]["B"]["mode"] = "action"
+        config.values["channel_policies"]["B"]["rules"]["defeat_interaction"]["playback"] = "wave"
+        # Regression fixture represents an existing user profile, not the new
+        # fresh-install defaults verified separately in test_scene_library.
+        config.values["channel_policies"]["A"]["rules"]["defeat_interaction"]["tier"] = "medium"
+        for policy in config.values["channel_policies"].values():
+            policy["rules"]["player_down"]["duration"] = 3.0
         with patch("ricca_dglab.backend.ProductConfig", return_value=config), \
                 patch("ricca_dglab.backend.TelemetryWorker.start"), \
                 patch("ricca_dglab.backend.enumerate_audio_devices", return_value=[]):

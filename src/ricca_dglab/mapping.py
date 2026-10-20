@@ -112,7 +112,7 @@ class RiccaMappingEngine:
         # telemetry; loss of refresh expires the hold within 500 ms.
         for channel, policy in self.channel_policies.items():
             rule = policy["rules"]["struggle"]
-            if policy["mode"] in {"action", "both"} and rule["enabled"]:
+            if policy["mode"] in {"action", "both", "action_audio"} and rule["enabled"]:
                 self._held[channel] = {
                     "key": "struggle", "wave": rule["wave"],
                     "strength": self._strength(rule),
@@ -193,7 +193,6 @@ class RiccaMappingEngine:
             "armor_break": "armor_break",
             "boss_catch": "boss_catch",
             "player_down": "player_down",
-            "capture_start": "capture_start",
         }.get(event.kind, "")
 
     def accept(self, events: Iterable[GameEvent], *, allow_output: bool = True) -> None:
@@ -235,7 +234,7 @@ class RiccaMappingEngine:
                     if mode not in {"hp", "both"}:
                         continue
                     key = self._damage_key(float(event.data.get("amount", 0)), policy)
-                elif key != "player_down" and mode not in {"action", "both"}:
+                elif key != "player_down" and mode not in {"action", "both", "action_audio"}:
                     continue
                 rule = policy["rules"].get(key, {})
                 if not rule.get("enabled"):

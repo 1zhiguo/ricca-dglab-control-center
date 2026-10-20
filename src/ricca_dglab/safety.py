@@ -5,6 +5,7 @@ import time
 from typing import Any
 
 from .models import RuntimeMode, SafetyDecision
+from .defeat_scene import scene_root
 
 
 SUPPORTED_GAMEASSEMBLY_SHA256 = (
@@ -26,6 +27,8 @@ def is_story_scene(state: dict[str, Any]) -> bool:
     return scene == "adv" or (
         scene == "atd"
         and str((state.get("story") or {}).get("asset_name", "")).startswith("ADV/")
+    ) or (
+        scene == "anv" and scene_root((state.get("story") or {}).get("asset_name")).startswith("SceneANV_")
     )
 
 

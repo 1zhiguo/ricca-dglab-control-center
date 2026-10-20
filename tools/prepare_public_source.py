@@ -10,14 +10,15 @@ import shutil
 
 
 ROOT_FILES = (
-    ".gitignore", ".firebaserc", "firebase.json", "LICENSE", "README.md",
-    "THIRD_PARTY_NOTICES.md", "CONTRIBUTING.md", "SECURITY.md", "RELEASING.md",
+    ".gitignore", ".firebaserc", "firebase.json", "LICENSE", "README.md", "RELEASE_1.0.0.json",
+    "THIRD_PARTY_NOTICES.md", "CONTRIBUTING.md", "SECURITY.md", "RELEASING.md", "DIAGNOSTICS.md",
     "requirements-native.txt", "setup_native.ps1", "run_native.ps1", "run_native.cmd",
     "run_native_debug.cmd", "build_launcher.ps1", "ricca_hp_smoke_test.py",
     "ricca_dashboard.py", "start_dashboard.cmd", "start_dashboard.ps1",
     "website/README.md", "website/check_site.py", "tools/prepare_public_source.py",
+    "tools/extract_localization.py",
 )
-SOURCE_DIRS = ("src", "tests", "launcher", "dashboard", ".github", "website/dist")
+SOURCE_DIRS = ("src", "tests", "tools", "launcher", "dashboard", ".github", "website/dist")
 SKIP_PARTS = {"__pycache__", ".git", ".openai", "node_modules", ".venv"}
 ALLOWED_SUFFIXES = {".py", ".qml", ".png", ".jpg", ".jpeg", ".svg", ".ico",
                     ".cs", ".html", ".css", ".js", ".json", ".md", ".txt",
@@ -101,7 +102,7 @@ def export(root: Path, destination: Path):
         target.write_bytes(data)
     (destination / "artifacts").mkdir(exist_ok=True)
     (destination / "PUBLIC_SOURCE_MANIFEST.json").write_text(
-        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     total = sum(len(data) for data in prepared.values())
     print(json.dumps({"destination": str(destination), "files": len(prepared),
                       "bytes": total, "license": manifest["license"],

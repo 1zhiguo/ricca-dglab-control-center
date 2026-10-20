@@ -1,5 +1,19 @@
 # Source publication and Firebase Hosting
 
+## 1.0.0 freeze
+
+Run `tools/build_release.py` using the build Python with PyInstaller installed.
+It emits a Windows x64 onedir ZIP, SHA-256, dependency versions, bundled source
+and license notices. No game, user configuration or telemetry is included.
+The frozen app is smoke-tested with isolated LOCALAPPDATA and --demo --no-socket.
+Upload the exact ZIP to COS/Baidu; fill only their real HTTPS links in
+website/dist/release-config.js. Never regenerate a published version in place.
+The matching public-source commit/tag and release JSON must be retained.
+
+The default global emergency hotkey is Ctrl+Alt+F10. Check native registration,
+conflict fallback, unregister and direct mock zero without pumping the Qt loop.
+Do not test QA hotkey messages against a physical-device callback.
+
 The public source snapshot is separate from a developer checkout that may hold
 the game, telemetry and unrelated projects. `tools/prepare_public_source.py`
 copies a strict allowlist, creates a SHA-256 manifest and rejects secret/private

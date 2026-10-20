@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 import math
+import os
 import queue
 import threading
 import time
 from typing import Any
 
+
+# Audio uses small elementwise reductions, never BLAS matrix multiplication.
+# Set before NumPy/SoundCard load: OpenBLAS otherwise starts a CPU-sized pool
+# (24 threads / ~750 MiB private commit on the measured Windows build).
+# This is process-local and leaves explicit operator configuration untouched.
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 
 try:  # Optional at import time so the rest of the control center still starts.
     import numpy as np

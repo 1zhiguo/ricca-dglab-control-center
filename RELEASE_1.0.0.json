@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "filename": "Ricca-x-DGlab-1.0.0-windows-x64.zip",
+  "sha256": "40ca4ac04fe26cd2d142826972901b347bbd67b048c56542bbc7420a730480a7",
+  "bytes": 121337210,
+  "source_manifest_sha256": "2905d006ba4d8932ee946e2ff23c802322ec2060144a6545b5fdee2cec447640",
+  "global_emergency_hotkey": "Ctrl+Alt+F10",
+  "signed": false,
+  "automated_tests": 168,
+  "packaged_smoke_pages": [0, 2, 5, 6],
+  "device_testing": "Maintainer confirmed; not a physical-safety guarantee or exhaustive scene validation",
+  "urls": {"cos": null, "baidu": null}
+}

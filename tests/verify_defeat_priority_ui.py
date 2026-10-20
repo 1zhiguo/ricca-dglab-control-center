@@ -19,6 +19,7 @@ app = QGuiApplication([])
 temporary = tempfile.TemporaryDirectory(dir=project)
 config = ProductConfig(Path(temporary.name) / "settings.json")
 config.values["onboarding_completed"] = True
+config.values["scene_catalog"] = []  # Retain legacy explicit-takeover regression coverage.
 with patch("ricca_dglab.backend.ProductConfig", return_value=config), \
      patch("ricca_dglab.backend.TelemetryWorker.start"), \
      patch("ricca_dglab.backend.enumerate_audio_devices", return_value=[]):

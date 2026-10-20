@@ -20,6 +20,8 @@ import time
 from typing import Any, Callable
 
 import qrcode
+from . import audit
+from .localization import LANGUAGES, translate
 from PySide6.QtCore import QObject, Property, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices, QGuiApplication
 
@@ -39,6 +41,7 @@ from .mapping import RiccaMappingEngine
 from .models import RuntimeMode, SafetyDecision
 from .product_config import (
     DEFAULT_EVENT_RULES,
+    default_channel_policies,
     ProductConfig,
     read_custom_waveforms,
     save_custom_waveform,
@@ -47,6 +50,10 @@ from .product_config import (
     sanitize_channel_policies,
 )
 from .safety import SafetyGovernor, SUPPORTED_GAMEASSEMBLY_SHA256, is_story_scene, game_is_paused
+from .scene_library import SceneLibrary, valid_scene_id
+from .scene_catalog import COLLECTED_SCENE_IDS
+from .story_queue import StoryQueuePlayer, sanitize_steps, MAX_STEPS
+from .product_config import story_mode
 from .waveforms import custom_frames, frames_for, waveform_catalog
 
 
@@ -202,9 +209,11 @@ class DemoReader:
 
 
 class AppBackend(QObject):
+    languageChanged = Signal()
     changed = Signal()
     eventsChanged = Signal()
     rawJsonChanged = Signal()
+    sceneLibraryChanged = Signal()
     toastRequested = Signal(str, str)
 
     def __init__(self, reader: Callable[[], dict[str, Any]], *, demo: bool = False,
@@ -223,7 +232,26 @@ class AppBackend(QObject):
         self._priority_output_active = False
         self._priority_kind = ""
         self._config = ProductConfig()
+        self._scene_library = SceneLibrary(self._config.path.parent / "scenes.json")
+        self._scene_capture_enabled = False
+        self._last_scene_capture = None
+        self._story_queue_player = StoryQueuePlayer()
+        self._story_queue_status = {}
+        self._story_queue_tokens = {"A": "", "B": ""}
+        self._last_queue_audit = {}
+        self._last_scene_asset = ""
+        self._last_output_audit = None
+        self._last_output_audit_at = 0.0
+        audit.record("config.loaded", path=str(self._config.path),
+                     scene_catalog_count=len(self._config.values["scene_catalog"]),
+                     scene_catalog=self._config.values["scene_catalog"],
+                     migration=getattr(self._config, "migration_info", {}),
+                     hard_cap=self._config.values["hard_cap"],
+                     strengths=self._strength_settings(),
+                     onboarding_completed=self._config.values["onboarding_completed"])
         self._game_path_status = "自动检测 HolyKnightRicca.exe"
+        self._hotkey_service = None
+        self._hotkey_status = "全局快捷键未注册"
         self._game_path_hash = ""
         self._game_path_supported = False
         self._configure_probe_path()
@@ -314,6 +342,175 @@ class AppBackend(QObject):
     def channelPolicies(self) -> dict:
         return self._config.values["channel_policies"]
 
+    @Property(str, notify=languageChanged)
+    def language(self) -> str:
+        return self._config.values.get("language", "zh")
+
+    @Property(str, notify=languageChanged)
+    def uiFontFamily(self) -> str:
+        return {"zh":"Microsoft YaHei UI", "en":"Segoe UI", "ja":"Yu Gothic UI"}[self.language]
+
+    @Slot(str, str, result=str)
+    def localize(self, source: str, language: str) -> str:
+        return translate(source, language)
+
+    @Slot(str, result=bool)
+    def setLanguage(self, language: str) -> bool:
+        if not isinstance(language, str) or language not in LANGUAGES:
+            return False
+        if language == self.language:
+            return True
+        try:
+            self._config.update({"language": language})
+        except OSError as error:
+            self.toastRequested.emit("保存失败", str(error))
+            return False
+        # No mapping refresh/disarm, audio restart, or pulse timer changes.
+        self.languageChanged.emit()
+        self.toastRequested.emit("保存成功", "界面语言已保存")
+        return True
+
+    @Property("QVariantMap", notify=changed)
+    def storyQueues(self) -> dict:
+        return self._config.values["story_queues"]
+
+    @Property("QVariantMap", notify=changed)
+    def storyQueueStatus(self) -> dict:
+        return self._story_queue_status
+
+    @Slot(str, "QVariantList", bool, result=bool)
+    def saveStoryQueue(self, channel: str, steps: list, use_queue: bool) -> bool:
+        if channel not in {"A", "B"} or not isinstance(steps, list) or not 1 <= len(steps) <= MAX_STEPS:
+            self.toastRequested.emit("保存失败", "队列须包含 1–16 段。")
+            return False
+        clean = sanitize_steps(steps)
+        waves = {entry["key"] for entry in self._wave_catalog()} | {"idle"}
+        if len(clean) != len(steps) or any(step["wave"] not in waves for step in clean):
+            self.toastRequested.emit("保存失败", "队列包含无效或缺失的波形。")
+            return False
+        queues, policies = deepcopy(self.storyQueues), deepcopy(self.channelPolicies)
+        queues[channel] = clean
+        policies[channel]["rules"]["defeat_interaction"]["playback"] = "queue" if use_queue else "wave"
+        if "story_mode" in policies[channel]:
+            audio = story_mode(policies[channel]) in {"audio", "fixed_audio", "queue_audio"}
+            policies[channel]["story_mode"] = ("queue" if use_queue else "fixed") + ("_audio" if audio else "")
+        try:
+            self._config.update({"story_queues": queues, "channel_policies": policies})
+        except OSError as error:
+            self.toastRequested.emit("保存失败", str(error))
+            return False
+        self._story_queue_player.reset(channel)
+        self._story_queue_tokens[channel] = ""
+        self._refresh_mapping_config()
+        self.changed.emit()
+        audit.record("story.queue_saved", channel=channel, count=len(clean), use_queue=use_queue)
+        self.toastRequested.emit("保存成功", channel + " 队列已保存并应用；段落从头计时，强度上限与暂停状态不变。")
+        return True
+
+    @Property(str, notify=changed)
+    def currentSceneId(self) -> str:
+        if (not self.telemetryOnline or self._reader_error or self._state.get("status") != "ok"
+                or self._state.get("build_supported") is not True
+                or self._state.get("scene") not in {"adv", "atd", "anv"}):
+            return ""
+        return scene_root((self._state.get("story") or {}).get("asset_name"))
+
+    @Property("QVariantList", notify=sceneLibraryChanged)
+    def sceneLibrary(self) -> list:
+        return self._scene_library.rows(self._config.values["scene_catalog"])
+
+    @Property(int, notify=sceneLibraryChanged)
+    def registeredSceneCount(self) -> int:
+        return len(self._config.values["scene_catalog"])
+
+    @Slot(result=bool)
+    def registerCollectedScenes(self) -> bool:
+        """Explicit in-process registration preserves the running user's profile."""
+        catalog = sorted(set(self._config.values["scene_catalog"]) | set(COLLECTED_SCENE_IDS))
+        try:
+            self._config.update({"scene_catalog": catalog})
+        except OSError as error:
+            self.toastRequested.emit("登记失败", str(error))
+            return False
+        audit.record("scene.batch_registered", source="in-process-confirmation",
+                     count=len(catalog), scene_catalog=catalog,
+                     path=str(self._config.path))
+        self.sceneLibraryChanged.emit()
+        self.changed.emit()
+        self.toastRequested.emit("保存成功", "34 个已收集场景已登记；白名单共 " + str(len(catalog))
+                                 + " 个。当前场景将在有效采样后自动匹配；强度、波形和暂停状态保持不变。")
+        return True
+
+    @Property(str, constant=True)
+    def sceneLibraryPath(self) -> str:
+        return str(self._scene_library.path)
+
+    @Property(bool, notify=sceneLibraryChanged)
+    def sceneCaptureEnabled(self) -> bool:
+        return self._scene_capture_enabled
+
+    @Slot(bool)
+    def setSceneCaptureEnabled(self, enabled: bool) -> None:
+        self._scene_capture_enabled = bool(enabled)
+        self._last_scene_capture = None
+        self.sceneLibraryChanged.emit()
+        self.toastRequested.emit("自动记录已开启" if enabled else "自动记录已关闭",
+                                 "仅记录遇到的场景，不自动启用循环；此开关仅本次运行有效。")
+
+    @Slot(result=bool)
+    def recordCurrentScene(self) -> bool:
+        if not self.currentSceneId:
+            self.toastRequested.emit("无法记录", "请先进入有效剧情；选择框、主菜单或读取失效时不记录。")
+            return False
+        try:
+            root = self._scene_library.record(self._state)
+        except (OSError, ValueError) as error:
+            self.toastRequested.emit("记录失败", str(error))
+            return False
+        self.sceneLibraryChanged.emit()
+        audit.record("scene.recorded", scene_root=root, source="manual", output_enabled=root in self._config.values["scene_catalog"])
+        self.toastRequested.emit("保存成功", root + " 已记录；不会因此自动启用输出。")
+        return True
+
+    @Slot(str, str, result=bool)
+    def saveSceneNote(self, root: str, note: str) -> bool:
+        try:
+            self._scene_library.save_note(root, note)
+        except (OSError, ValueError) as error:
+            self.toastRequested.emit("保存失败", str(error))
+            return False
+        self.sceneLibraryChanged.emit()
+        self.toastRequested.emit("保存成功", "场景备注已保存。")
+        return True
+
+    @Slot(str, bool, result=bool)
+    def setSceneLoopEnabled(self, root: str, enabled: bool) -> bool:
+        if not valid_scene_id(root) or root not in self._scene_library.entries:
+            self.toastRequested.emit("无法启用", "请先记录并核对这个场景。")
+            return False
+        catalog = list(self._config.values["scene_catalog"])
+        if enabled and root not in catalog:
+            catalog.append(root)
+        elif not enabled:
+            catalog = [key for key in catalog if key != root]
+        try:
+            self._config.update({"scene_catalog": catalog})
+        except OSError as error:
+            self.toastRequested.emit("保存失败", str(error))
+            return False
+        if not enabled and self._defeat_scene.root == root:
+            self._defeat_scene.reset()
+        self.sceneLibraryChanged.emit()
+        self.changed.emit()
+        audit.record("scene.loop_setting", scene_root=root, enabled=enabled)
+        self.toastRequested.emit("保存成功", root + (" 已启用循环，遵循当前通道策略与暂停状态。" if enabled else " 已停用循环。"))
+        return True
+
+    @Slot()
+    def openSceneLibraryFolder(self) -> None:
+        self._scene_library.path.parent.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(self._scene_library.path.parent)))
+
     @Property(bool, notify=changed)
     def gameHudEnabled(self) -> bool:
         return bool(self._config.values.get("game_hud_enabled", True))
@@ -332,7 +529,7 @@ class AppBackend(QObject):
     @Slot(str, result=str)
     def channelModeName(self, channel: str) -> str:
         mode = self.channelPolicies.get(channel, {}).get("mode", "off")
-        return {"hp": "HP 伤害", "action": "动作反馈", "both": "HP + 动作", "audio": "剧情音频", "off": "关闭"}.get(mode, "关闭")
+        return {"hp": "HP 伤害", "action": "动作反馈", "both": "HP + 动作", "none": "不接收战斗事件", "audio": "剧情音频（旧包络）", "action_audio": "战斗动作 / 剧情音频队列", "off": "关闭"}.get(mode, "关闭")
 
     @Slot(str, "QVariantMap", result=bool)
     def saveChannelPolicy(self, channel: str, policy: dict) -> bool:
@@ -340,6 +537,9 @@ class AppBackend(QObject):
             return False
         incoming = {**self.channelPolicies, channel: policy}
         clean = sanitize_channel_policies(incoming)
+        if ("story_mode" not in policy and clean[channel]["mode"] == "action_audio"
+                and self.channelPolicies[channel]["mode"] != "action_audio"):
+            clean[channel]["rules"]["defeat_interaction"]["playback"] = "queue"
         available = {item["key"] for item in self._wave_catalog()}
         if any(rule["wave"] not in available for rule in clean[channel]["rules"].values()):
             self._append_system_event("通道策略未保存", "策略中有已删除或不可用的波形", "danger")
@@ -356,7 +556,14 @@ class AppBackend(QObject):
         return True
 
     def _wave_catalog(self) -> list[dict[str, Any]]:
-        return waveform_catalog(self._custom_waveforms)
+        # QML reads this through many bindings on every UI notification. Frame
+        # decoding/frequency calculation is static until the custom library
+        # changes; do not rebuild hundreds of frame values on the output loop.
+        if (getattr(self, "_wave_catalog_cache", None) is None
+                or self._custom_waveforms != self._wave_catalog_custom):
+            self._wave_catalog_cache = waveform_catalog(self._custom_waveforms)
+            self._wave_catalog_custom = deepcopy(self._custom_waveforms)
+        return self._wave_catalog_cache
 
     def _configure_probe_path(self) -> None:
         """Keep the low-level reader on automatic or exact-path process matching."""
@@ -560,6 +767,42 @@ class AppBackend(QObject):
     def audioGate(self) -> int:
         return _i(self._config.values.get("audio_gate"), 12)
 
+    @Property(float, notify=changed)
+    def audioGain(self) -> float:
+        return float(self._config.values.get("audio_gain", 1.0))
+
+    @Property(int, notify=changed)
+    def audioQueueMinimum(self) -> int:
+        return min(self.hardCap, int(self._config.values.get("audio_queue_minimum", 0)))
+
+    @Slot(int, result=bool)
+    def saveAudioQueueMinimum(self, value: int) -> bool:
+        if not 0 <= value <= self.hardCap:
+            return False
+        try:
+            self._config.update({"audio_queue_minimum": value})
+        except OSError as error:
+            self.toastRequested.emit("保存失败", str(error))
+            return False
+        self.changed.emit()
+        self.toastRequested.emit("保存成功", "音频队列最低强度已保存")
+        return True
+
+    @Slot(float, result=bool)
+    def saveAudioGain(self, gain: float) -> bool:
+        if not math.isfinite(gain) or not 0 <= gain <= 10:
+            return False
+        try:
+            self._config.update({"audio_gain": round(gain, 1)})
+        except OSError as error:
+            self.toastRequested.emit("保存失败", str(error))
+            return False
+        # Only scale audio-modulated output. Do not restart capture, rewind the
+        # queue, change authorization, or raise the user's saved safety cap.
+        self.changed.emit()
+        self.toastRequested.emit("保存成功", "音频强度增益已保存")
+        return True
+
     @Property(str, notify=changed)
     def audioChannel(self) -> str:
         return str(self._config.values.get("audio_channel") or "B")
@@ -601,7 +844,14 @@ class AppBackend(QObject):
 
     @Property(float, notify=changed)
     def audioPulseStrength(self) -> float:
-        return (min(self.hardCap, self._audio_strength * self._mapping.sensitivity_multiplier)
+        hybrid = [ch for ch, policy in self.channelPolicies.items()
+                  if story_mode(policy) in {"audio", "fixed_audio", "queue_audio"}]
+        if hybrid and not any(p["mode"] == "audio" and "story_mode" not in p for p in self.channelPolicies.values()):
+            return max((self._preview_a if ch == "A" else self._preview_b
+                        for ch in hybrid if self._story_queue_status.get(ch, {}).get("playing")), default=0.0)
+        if not hybrid and not any(p["mode"] == "audio" and "story_mode" not in p for p in self.channelPolicies.values()):
+            return 0.0
+        return (min(self.hardCap, self._audio_strength * self.audioGain * self._mapping.sensitivity_multiplier)
                 if self._audio_output_allowed() else 0.0)
 
     @Property(bool, notify=changed)
@@ -610,16 +860,26 @@ class AppBackend(QObject):
 
     @Property("QVariantList", notify=changed)
     def audioPulsePoints(self) -> list[int]:
+        if any(story_mode(policy) == "audio" or (policy["mode"] == "audio" and "story_mode" not in policy)
+               for policy in self.channelPolicies.values()):
+            return list(self._audio_points)
+        for channel, policy in self.channelPolicies.items():
+            if story_mode(policy) in {"fixed_audio", "queue_audio"}:
+                key = self._story_queue_status.get(channel, {}).get("wave", "idle")
+                return list(next((entry["points"] for entry in self._wave_catalog() if entry["key"] == key), []))
         return list(self._audio_points)
 
     @Property(str, notify=changed)
     def audioSceneStatus(self) -> str:
         if not self.audioEmpathyEnabled:
             return "总开关关闭"
-        if not self._decision.allow_story_output:
-            return "等待 ADV / ATD 剧情场景"
-        channels = [channel for channel, policy in self.channelPolicies.items() if policy["mode"] == "audio"]
-        return "剧情音频 → " + " + ".join(channels) if channels else "音频可预览 · 请在通道策略选择剧情音频"
+        if not is_story_scene(self._state):
+            return "战斗 / 菜单不响应音频 · 等待 ADV / ATD / ANV 剧情"
+        names = {"audio": "实时音频", "fixed_audio": "固定＋音频", "queue_audio": "循环＋音频"}
+        channels = [channel + " · " + names[story_mode(policy)]
+                    for channel, policy in self.channelPolicies.items()
+                    if policy["mode"] != "off" and story_mode(policy) in names]
+        return "剧情音频 → " + " / ".join(channels) if channels else "请在通道的剧情 / 鉴赏策略选择音频模式"
 
     @Property(bool, notify=changed)
     def storySceneActive(self) -> bool:
@@ -755,6 +1015,7 @@ class AppBackend(QObject):
     def toggleOutputPause(self) -> None:
         self._user_output_paused = not self._user_output_paused
         if not self._user_output_paused:
+            self._bridge.clear_global_emergency_stop()
             self._stop_latched = False
         elif self._priority_kind != "死亡惩罚":
             self._priority_output_active = False
@@ -793,6 +1054,8 @@ class AppBackend(QObject):
         phase = {"idle": "未进入", "waiting": "HP 归零 · 等待场景确认", "loading": "加载中",
                  "dialogue": "剧情段", "interaction": "互动循环", "stopped": "动画停止",
                  "unknown": "互动状态不可用", "unconfirmed": "未记录本次败北 · 不输出"}.get(scene.phase, scene.phase)
+        if scene.catalogued:
+            return "场景循环 · " + scene.root + (" · 输出已暂停" if self._user_output_paused else " · 剧情 / 回想")
         return "败北 CG · " + phase + (" · " + scene.cut if scene.root else "")
 
     @Property(bool, notify=changed)
@@ -942,10 +1205,19 @@ class AppBackend(QObject):
     def storySpeaker(self) -> str:
         return str((self._get("story", {}) or {}).get("speaker") or "旁白")
 
+    @Property(bool, notify=changed)
+    def hasStorySpeaker(self) -> bool:
+        return bool((self._get("story", {}) or {}).get("speaker"))
+
     @Property(str, notify=changed)
     def storyText(self) -> str:
         story = self._get("story", {}) or {}
         return str(story.get("stripped_message") or story.get("message") or "当前不在剧情对话中")
+
+    @Property(bool, notify=changed)
+    def hasStoryMessage(self) -> bool:
+        story = self._get("story", {}) or {}
+        return bool(story.get("stripped_message") or story.get("message"))
 
     @Property(int, notify=changed)
     def storyLine(self) -> int:
@@ -1035,6 +1307,10 @@ class AppBackend(QObject):
                  f"Socket：{'就绪' if self._server_ready else '未就绪'} · TCP {port}",
                  f"连接地址：{self._lan_ip}:{port}",
                  f"二维码：{'可用' if self._qr_source else '不可用'} · 手机：{'已连接' if self._device_connected else '未绑定'}"]
+        log_status = audit.status()
+        lines.extend([f"运行日志：{log_status['path'] or '未启用（模拟/测试模式）'}",
+                      f"日志会话：{log_status['session']} · 丢弃 {log_status['dropped']} · 错误 {log_status['error'] or '无'}",
+                      f"配置：{self._config.path} · 教程完成 {self.onboardingCompleted} · 硬上限 {self.hardCap}"])
         if self._server_error:
             lines.append("服务错误：" + self._server_error)
         try:
@@ -1096,6 +1372,57 @@ class AppBackend(QObject):
         self._bridge_status = "紧急停止：A/B 已归零并清空队列"
         self._append_system_event("紧急归零", "自动输出已撤销，A/B 队列已清空", "danger")
         self.changed.emit()
+
+    @Property(str, notify=changed)
+    def emergencyHotkey(self) -> str:
+        return self._config.values.get("emergency_hotkey", "Ctrl+Alt+F10")
+
+    @Property(str, notify=changed)
+    def hotkeyStatus(self) -> str:
+        return self._hotkey_status
+
+    def attachHotkey(self, service) -> None:
+        self._hotkey_service = service
+        service.triggered.connect(self.emergencyStop)
+        try:
+            ok, detail = service.configure(self.emergencyHotkey)
+        except ValueError as error:
+            ok, detail = False, str(error)
+        self._hotkey_status = "全局急停快捷键已注册" if ok else detail
+        if not ok:
+            self.emergencyStop()
+            QTimer.singleShot(600, lambda: self.toastRequested.emit("全局急停键不可用", detail))
+        self.changed.emit()
+
+    @Slot(str, result=bool)
+    def saveEmergencyHotkey(self, chord: str) -> bool:
+        from .hotkey import parse_hotkey
+        try:
+            normalized, _, _ = parse_hotkey(chord)
+        except ValueError as error:
+            self.toastRequested.emit("保存失败",str(error))
+            return False
+        if self._hotkey_service is None:
+            self.toastRequested.emit("保存失败","全局快捷键未注册")
+            return False
+        self.emergencyStop()
+        old = self.emergencyHotkey
+        ok, detail = self._hotkey_service.configure(normalized)
+        if not ok:
+            self.toastRequested.emit("保存失败",detail)
+            return False
+        try:
+            self._config.update({"emergency_hotkey":normalized})
+        except OSError as error:
+            restored, reason = self._hotkey_service.configure(old)
+            self._hotkey_status = "全局急停快捷键已注册" if restored else reason
+            self.changed.emit()
+            self.toastRequested.emit("保存失败",str(error))
+            return False
+        self._hotkey_status = "全局急停快捷键已注册"
+        self.changed.emit()
+        self.toastRequested.emit("保存成功","急停快捷键已保存，输出保持暂停，请手动恢复")
+        return True
 
     @Slot()
     def clearEvents(self) -> None:
@@ -1300,7 +1627,7 @@ class AppBackend(QObject):
     def resetEventMappings(self) -> bool:
         rules = {key: dict(value) for key, value in DEFAULT_EVENT_RULES.items()}
         try:
-            self._config.update({"event_rules": rules, "channel_policies": sanitize_channel_policies(None, rules)})
+            self._config.update({"event_rules": rules, "channel_policies": default_channel_policies()})
         except OSError as error:
             self._append_system_event("恢复默认映射失败", str(error), "danger")
             return False
@@ -1475,7 +1802,12 @@ class AppBackend(QObject):
         self._audio_worker.start()
 
     def _apply_audio_sample(self, payload: dict[str, Any]) -> None:
-        if self._pause_active or _f(payload.get("received_at"), time.monotonic()) <= self._audio_resume_after:
+        hybrid_story = (any(story_mode(p) in {"audio", "fixed_audio", "queue_audio"}
+                            and p["mode"] != "off" for p in self.channelPolicies.values())
+                        and self._defeat_story_allowed() and not self._user_output_paused
+                        and not (self._state.get("game_ui") or {}).get("is_user_pause"))
+        if ((self._pause_active and not hybrid_story)
+                or _f(payload.get("received_at"), time.monotonic()) <= self._audio_resume_after):
             return
         rms = max(0.0, _f(payload.get("rms")))
         peak = max(0.0, _f(payload.get("peak")))
@@ -1495,6 +1827,7 @@ class AppBackend(QObject):
         self._audio_last_sample = _f(payload.get("received_at"), time.monotonic())
 
     def _append_system_event(self, title: str, detail: str, severity: str = "info") -> None:
+        audit.record("app.event", title=title, severity=severity)
         if title == "紧急归零":
             self.toastRequested.emit("输出已紧急停止", detail)
         elif severity == "danger":
@@ -1508,10 +1841,19 @@ class AppBackend(QObject):
         self.eventsChanged.emit()
 
     def _apply_state(self, payload: dict[str, Any]) -> None:
+        previous_state = self._state
+        detector_had_baseline = self._detector.previous is not None
         state = dict(payload["state"])
         state.setdefault("connected", True)
         now = float(payload["received_at"])
         self._state = state
+        if (is_story_scene(state) and
+                (not is_story_scene(previous_state)
+                 or scene_root((state.get("story") or {}).get("asset_name")) != scene_root((previous_state.get("story") or {}).get("asset_name")))):
+            # Never reuse battle/menu audio on the first frame of a story.
+            self._audio_strength = self._audio_last_sample = 0.0
+            self._audio_mapper = AudioPulseMapper()
+            self._audio_resume_after = now
         self._last_received = now
         self._sample_times.append(now)
         self._latency_ms = float(payload["latency_ms"])
@@ -1522,20 +1864,93 @@ class AppBackend(QObject):
             self._detector.reset(now)
             self._death_penalty.cancel()
         detected = self._detector.ingest(state, now)
+        if (type(state.get("current_hp")) in {int, float} and state["current_hp"] == 0
+                and (previous_state.get("current_hp") != 0 or not detector_had_baseline
+                     or previous_state.get("player_address") != state.get("player_address")
+                     or previous_state.get("scene") != state.get("scene"))):
+            death_detected = any(event.kind == "player_down" for event in detected)
+            missing_edge_reasons = []
+            if not death_detected:
+                if not detector_had_baseline: missing_edge_reasons.append("no-detector-baseline")
+                if _f(previous_state.get("current_hp")) <= 0: missing_edge_reasons.append("no-positive-hp-edge")
+                if previous_state.get("player_address") != state.get("player_address"): missing_edge_reasons.append("player-object-changed")
+                if previous_state.get("scene") != state.get("scene"): missing_edge_reasons.append("scene-changed")
+                if state.get("scene") != "gameplay": missing_edge_reasons.append("not-gameplay-scene")
+                if state.get("status") != "ok": missing_edge_reasons.append("invalid-read")
+                if _f(state.get("max_hp")) <= 0: missing_edge_reasons.append("invalid-max-hp")
+            audit.record("death.zero_observed", **audit.state_fields(state),
+                         previous_hp=previous_state.get("current_hp"),
+                         detector_baseline=detector_had_baseline,
+                         actor_changed=previous_state.get("player_address") != state.get("player_address"),
+                         scene_changed=previous_state.get("scene") != state.get("scene"),
+                         death_detected=death_detected, not_triggered_reasons=missing_edge_reasons)
         allow_gameplay = self._decision.allow_gameplay_output and not self._pause_active
         self._mapping.reconcile_capture(state, allow_output=allow_gameplay, now=now)
         cg_changes = self._defeat_scene.observe(
             state, now=now, allow_story=self._defeat_story_allowed(),
             paused=self._stop_latched,
+            registered_scenes=self._config.values["scene_catalog"],
+            blocked_scenes=set(self._scene_library.entries) - set(self._config.values["scene_catalog"]),
         )
+        asset = str((state.get("story") or {}).get("asset_name") or "")
+        current_root = scene_root(asset)
+        active_asset = asset if current_root and state.get("scene") in {"adv", "atd", "anv"} else ""
+        if active_asset != self._last_scene_asset:
+            audit.record("scene.observed", asset=active_asset,
+                         scene_root=current_root if active_asset else "",
+                         registered=current_root in self._config.values["scene_catalog"],
+                         **audit.state_fields(state))
+            self._last_scene_asset = active_asset
+        capture_key = (active_asset, str((state.get("atd") or {}).get("cut_name") or ""))
+        if self._scene_capture_enabled and self.currentSceneId and capture_key != self._last_scene_capture:
+            try:
+                root = self._scene_library.record(state)
+            except (OSError, ValueError) as error:
+                self._scene_capture_enabled = False
+                self.toastRequested.emit("自动记录已停止", str(error))
+            else:
+                self._last_scene_capture = capture_key
+                audit.record("scene.recorded", scene_root=root, source="automatic")
+            self.sceneLibraryChanged.emit()
+        elif not active_asset:
+            self._last_scene_capture = None
         for event in detected:
+            if event.kind == "player_down":
+                blockers = []
+                if self._stop_latched: blockers.append("emergency-stop")
+                if not self._device_connected: blockers.append("phone-not-bound")
+                if not self.onboardingCompleted: blockers.append("onboarding-incomplete")
+                if self.hardCap <= 0: blockers.append("hard-cap-zero")
+                audit.record("death.detected", event_sequence=event.sequence,
+                             trigger_blockers=blockers, scheduled=not blockers,
+                             hard_cap=self.hardCap, strengths=self._strength_settings(),
+                             **audit.state_fields(state))
             if (event.kind == "player_down" and not self._stop_latched
                     and self._device_connected and self.onboardingCompleted and self.hardCap > 0):
                 self._death_penalty.trigger(state, self.channelPolicies, now=now, sequence=event.sequence)
+                channel_status = {}
+                for channel, policy in self.channelPolicies.items():
+                    rule = policy["rules"]["player_down"]
+                    configured = rule["custom_strength"]
+                    if configured is None:
+                        configured = self._strength_settings().get(rule["tier"], 0)
+                    channel_blocks = []
+                    if policy["mode"] == "off": channel_blocks.append("channel-mode-off")
+                    if not rule["enabled"]: channel_blocks.append("death-rule-disabled")
+                    if configured <= 0: channel_blocks.append("configured-strength-zero")
+                    channel_status[channel] = {"blockers":channel_blocks,
+                                               "capped_strength":min(self.hardCap, max(0, configured))}
+                audit.record("death.scheduled", event_sequence=event.sequence,
+                             channels=channel_status,
+                             rules={ch: {"mode": policy["mode"],
+                                         **policy["rules"]["player_down"]}
+                                    for ch, policy in self.channelPolicies.items()})
                 self._defeat_scene.record_death(state, now)
-                # The HP-edge cue and CG entry are one punishment, never two.
-                self._defeat_scene.cancel_pulses()
+                # Only this HP-edge scheduler owns the one-off death punishment.
         for kind, title, detail in cg_changes:
+            audit.record("defeat.transition", kind=kind, title=title,
+                         scene_root=self._defeat_scene.root, catalogued=self._defeat_scene.catalogued,
+                         phase=self._defeat_scene.phase, **audit.state_fields(state))
             self._events.appendleft({"id": f"cg-{time.monotonic_ns()}", "time": datetime.now().astimezone().isoformat(timespec="milliseconds"),
                                      "kind": kind, "title": title, "detail": detail, "severity": "warning", "data": {}})
         if cg_changes:
@@ -1632,6 +2047,8 @@ class AppBackend(QObject):
             if kind == "telemetry":
                 self._apply_state(payload)
             elif kind == "telemetry_error":
+                audit.record("telemetry.read_error", reason="read-failed",
+                             detail=str(payload.get("detail", ""))[:300])
                 self._reader_error = str(payload.get("detail", "读取失败"))
                 # Do not retain a capture pulse through even one failed read,
                 # or infer a struggle delta across the missing interval.
@@ -1664,26 +2081,105 @@ class AppBackend(QObject):
         preview = self._mapping.preview(preview_decision, now)
         strength_a, strength_b = preview.strength_a, preview.strength_b
         wave_a, wave_b = preview.wave_a, preview.wave_b
-        audio_strength = self._audio_strength if self._audio_output_allowed() else 0.0
+        audio_strength = min(self.hardCap, self._audio_strength * self.audioGain) if self._audio_output_allowed() else 0.0
         if audio_strength > 0:
-            if self.channelPolicies["A"]["mode"] == "audio":
+            if self.channelPolicies["A"]["mode"] == "audio" and "story_mode" not in self.channelPolicies["A"]:
                 strength_a, wave_a = audio_strength, "audio-reactive"
-            if self.channelPolicies["B"]["mode"] == "audio":
+            if self.channelPolicies["B"]["mode"] == "audio" and "story_mode" not in self.channelPolicies["B"]:
                 strength_b, wave_b = audio_strength, "audio-reactive"
         cg = self._defeat_scene.preview(
             self.channelPolicies, self._strength_settings(), self.hardCap, now=now,
             allow=self.telemetryOnline and not self._reader_error and self._defeat_story_allowed(),
             allow_loop=not (self._user_output_paused
-                            or (self._state.get("game_ui") or {}).get("is_user_pause")
-                            or (self._state.get("story") or {}).get("act_screen_paused")),
+                            or (self._state.get("game_ui") or {}).get("is_user_pause")),
         )
-        cg_a = cg.strength_a > 0 and (cg.reason == "defeat-penalty" or cg.strength_a >= strength_a)
-        cg_b = cg.strength_b > 0 and (cg.reason == "defeat-penalty" or cg.strength_b >= strength_b)
-        if cg_a:
-            strength_a, wave_a = cg.strength_a, cg.wave_a
-        if cg_b:
-            strength_b, wave_b = cg.strength_b, cg.wave_b
         death = self._death_penalty.preview(self._state, self._strength_settings(), self.hardCap, now=now)
+        eligible = bool(not self._demo and not self._stop_latched
+            and not self._onboarding_active and self.onboardingCompleted and self.hardCap > 0
+            and self._device_connected and self.telemetryOnline and not self._reader_error
+            and self._state.get("build_supported") is True)
+        session = self._defeat_scene
+        queue_ready = bool(eligible and session.root and session.confirm_count >= 3
+            and 0 <= now - session.updated < 0.5 and self._defeat_story_allowed()
+            and session.phase in {"dialogue", "interaction", "stopped"}
+            and not self._user_output_paused
+            and not (self._state.get("game_ui") or {}).get("is_user_pause")
+            and death.strength_a <= 0 and death.strength_b <= 0)
+        audio_channels = {ch for ch, policy in self.channelPolicies.items()
+                          if story_mode(policy) in {"audio", "fixed_audio", "queue_audio"}}
+        queue_channels = {ch for ch, policy in self.channelPolicies.items()
+                          if policy["mode"] != "off" and policy["rules"]["defeat_interaction"]["enabled"]
+                          and (story_mode(policy) == "queue" or ch in audio_channels)}
+        key = (session.pid, session.root, session.sequence) if session.root else None
+        asset = str((self._state.get("story") or {}).get("asset_name") or "")
+        audio_context = bool(self._defeat_story_allowed() and asset.startswith("ADV/"))
+        audio_key = (self._state.get("process_id"), "audio-story", scene_root(asset) or asset) if audio_context else None
+        audio_ready = bool(eligible and audio_context and self.audioEmpathyEnabled
+                           and 0 <= now - self._audio_last_sample < 0.35
+                           and not self._user_output_paused
+                           and not (self._state.get("game_ui") or {}).get("is_user_pause")
+                           and death.strength_a <= 0 and death.strength_b <= 0)
+        active_channels = {ch for ch in queue_channels if audio_ready and ch in audio_channels}
+        active_channels |= {ch for ch in queue_channels if queue_ready and ch not in audio_channels}
+        keys = {ch: audio_key if ch in audio_channels else key for ch in ("A", "B")}
+        self._story_queue_player.tick(keys, now, active_channels)
+        queue_active, queue_status = {}, {}
+        for channel in ("A", "B"):
+            rule = self.channelPolicies[channel]["rules"]["defeat_interaction"]
+            plan = self.storyQueues[channel]
+            if channel in audio_channels and story_mode(self.channelPolicies[channel]) != "queue_audio":
+                plan = sanitize_steps([{**rule, "duration": 30}])
+            selected = self._story_queue_player.select(channel, plan, self._strength_settings(), self.hardCap)
+            active = channel in active_channels and selected is not None
+            if selected:
+                selected = dict(selected)
+                selected["audio_modulated"] = channel in audio_channels
+                if channel in audio_channels:
+                    if story_mode(self.channelPolicies[channel]) == "audio":
+                        selected["wave"] = "audio-reactive"
+                    factor = min(1.0, max(0.0, self._audio_strength / max(1, self.hardCap))) if audio_ready and self._audio_level > self.audioGate else 0.0
+                    selected["base_strength"] = selected["strength"]
+                    selected["audio_factor"] = round(factor, 3)
+                    selected["audio_gain"] = self.audioGain
+                    selected["strength"] = min(self.hardCap, selected["strength"] * factor * self.audioGain)
+                    # A fresh, authorized queue may retain a user-selected bed
+                    # under voice gaps. Never turn explicit rests, zero bases,
+                    # master mute, stale capture or blocked scenes into output.
+                    floor = (self.audioQueueMinimum if active and audio_ready and self.audioGain > 0
+                             and story_mode(self.channelPolicies[channel]) == "queue_audio"
+                             and selected["base_strength"] > 0 else 0)
+                    selected["minimum_strength"] = floor
+                    selected["strength"] = min(self.hardCap, max(floor, selected["strength"]))
+                missing = selected["wave"] not in {"idle", "audio-reactive"} and not frames_for(selected["wave"], self._custom_waveforms)
+                if missing or selected["wave"] == "idle":
+                    selected["strength"] = 0
+                selected.update(playing=bool(active), enabled=channel in queue_channels, missing_wave=bool(missing))
+            queue_status[channel] = {
+                **(selected or {"count": 0, "playing": False, "enabled": channel in queue_channels}),
+                "configured": self.channelPolicies[channel]["rules"]["defeat_interaction"].get("playback") == "queue",
+            }
+            self._story_queue_tokens[channel] = selected["token"] if active else ""
+            if active:
+                queue_active[channel] = selected
+            signature = (bool(active), selected["token"] if selected else "", bool(selected and selected.get("missing_wave")))
+            if signature != self._last_queue_audit.get(channel):
+                audit.record("story.queue_step", channel=channel, playing=bool(active),
+                             index=selected["index"] if selected else None,
+                             wave=selected["wave"] if selected else "idle",
+                             strength=selected["strength"] if selected else 0,
+                             missing_wave=bool(selected and selected.get("missing_wave")))
+                self._last_queue_audit[channel] = signature
+        if queue_status != self._story_queue_status:
+            self._story_queue_status = queue_status
+            changed = True
+        cg_a = "A" in queue_active or (cg.strength_a > 0 and cg.strength_a >= strength_a)
+        cg_b = "B" in queue_active or (cg.strength_b > 0 and cg.strength_b >= strength_b)
+        if cg_a:
+            strength_a, wave_a = ((queue_active["A"]["strength"], queue_active["A"]["wave"])
+                                  if "A" in queue_active else (cg.strength_a, cg.wave_a))
+        if cg_b:
+            strength_b, wave_b = ((queue_active["B"]["strength"], queue_active["B"]["wave"])
+                                  if "B" in queue_active else (cg.strength_b, cg.wave_b))
         death_a, death_b = death.strength_a > 0, death.strength_b > 0
         if death_a:
             strength_a, wave_a = death.strength_a, death.wave_a
@@ -1697,17 +2193,27 @@ class AppBackend(QObject):
             self._preview_a, self._preview_b, self._wave_a, self._wave_b = next_preview
             changed = True
         priority = bool(death_a or death_b or cg_a or cg_b)
-        eligible = bool(not self._demo and not self._stop_latched
-            and not self._onboarding_active and self.onboardingCompleted and self.hardCap > 0
-            and self._device_connected
-            and self.telemetryOnline
-            and not self._reader_error
-            and self._state.get("build_supported") is True
-        )
         output_safe = eligible and (priority or (self._output_armed and not self._pause_active
             and (self._decision.allow_gameplay_output or self._decision.allow_story_output)))
+        reasons = self._output_block_reasons(priority)
+        gate_signature = (output_safe, priority, tuple(reasons), self._decision.mode.value,
+                          self._death_penalty.sequence, wave_a, wave_b)
+        if gate_signature != self._last_output_audit or now - self._last_output_audit_at >= 10:
+            audit.record("output.gate", allowed=output_safe, blockers=reasons,
+                         scene_root=scene_root((self._state.get("story") or {}).get("asset_name")),
+                         scene_registered=scene_root((self._state.get("story") or {}).get("asset_name")) in self._config.values["scene_catalog"],
+                         scene_catalog_count=self.registeredSceneCount,
+                         priority=priority, death_sequence=self._death_penalty.sequence,
+                         death_preview_reason=death.reason, cg_preview_reason=cg.reason,
+                         requested={"A": strength_a, "B": strength_b},
+                         waveforms={"A": wave_a, "B": wave_b},
+                         hard_cap=self.hardCap, mode=self._decision.mode.value,
+                         **audit.state_fields(self._state))
+            self._last_output_audit, self._last_output_audit_at = gate_signature, now
         priority_active = bool(eligible and priority)
-        priority_kind = ("死亡惩罚" if death_a or death_b or cg.reason == "defeat-penalty" else "败北互动") if priority_active else ""
+        priority_kind = ("死亡惩罚" if death_a or death_b
+                         else "剧情音频" if any(ch in queue_active for ch in audio_channels)
+                         else "场景循环" if self._defeat_scene.catalogued else "败北互动") if priority_active else ""
         if (priority_active, priority_kind) != (self._priority_output_active, self._priority_kind):
             self._priority_output_active, self._priority_kind = priority_active, priority_kind
             changed = True
@@ -1721,24 +2227,48 @@ class AppBackend(QObject):
             self._bridge.update_auto_outputs(
                 strength_a,
                 output_frames(wave_a) if strength_a > 0 else (),
-                wave_key_a=wave_a if wave_a == "audio-reactive" else wave_a + ":" + (self._death_penalty.token("A") if death_a else self._defeat_scene.token("A") if cg_a else self._mapping.pulse_token("A")),
+                wave_key_a=wave_a if wave_a == "audio-reactive" else wave_a + ":" + (self._death_penalty.token("A") if death_a else self._defeat_scene.token("A") + self._story_queue_tokens["A"] if cg_a else self._mapping.pulse_token("A")),
                 strength_b=strength_b,
                 frames_b=output_frames(wave_b) if strength_b > 0 else (),
-                wave_key_b=wave_b if wave_b == "audio-reactive" else wave_b + ":" + (self._death_penalty.token("B") if death_b else self._defeat_scene.token("B") if cg_b else self._mapping.pulse_token("B")),
+                wave_key_b=wave_b if wave_b == "audio-reactive" else wave_b + ":" + (self._death_penalty.token("B") if death_b else self._defeat_scene.token("B") + self._story_queue_tokens["B"] if cg_b else self._mapping.pulse_token("B")),
                 hard_cap=self.hardCap,
             )
         self._bridge.set_auto_enabled(output_safe)
         if changed:
             self.changed.emit()
 
+    def _output_block_reasons(self, priority: bool) -> list[str]:
+        """Explain the existing gates without changing their authorization logic."""
+        checks = [
+            (self._demo, "demo-mode"), (self._stop_latched, "emergency-stop"),
+            (self._onboarding_active, "onboarding-open"),
+            (not self.onboardingCompleted, "onboarding-incomplete"),
+            (self.hardCap <= 0, "hard-cap-zero"),
+            (not self._device_connected, "phone-not-bound"),
+            (not self.telemetryOnline, "telemetry-stale-or-offline"),
+            (bool(self._reader_error), "read-error"),
+            (self._state.get("build_supported") is not True, "unsupported-build"),
+        ]
+        if not priority:
+            checks.extend([
+                (not self._output_armed, "auto-output-not-armed"),
+                (self._user_output_paused, "user-output-paused"),
+                (game_is_paused(self._state), "game-paused"),
+                (not (self._decision.allow_gameplay_output or self._decision.allow_story_output), "scene-not-output-ready"),
+            ])
+        return [reason for blocked, reason in checks if blocked]
+
     def shutdown(self) -> None:
         if self._closed:
             return
         self._closed = True
+        audit.record("session.shutdown")
         self._timer.stop()
         self._stop.set()
-        self._stop_audio_capture()
         self._bridge.emergency_stop()
         self._bridge.stop()
+        self._stop_audio_capture()
+        if self._hotkey_service is not None:
+            self._hotkey_service.close()
         if self._worker.is_alive():
             self._worker.join(timeout=1.5)

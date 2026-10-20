@@ -23,7 +23,7 @@ Dialog {
     padding: 24
     modal: true
     closePolicy: Popup.NoAutoClose
-    background: Rectangle { color: "#101725"; radius: 20; border.color: "#34465f" }
+    background: Rectangle { color: "#25251c"; radius: 20; border.color: "#65573f" }
 
     function openGuide() {
         controller.beginOnboarding()
@@ -40,42 +40,42 @@ Dialog {
         id: button
         implicitHeight: 42; leftPadding: 18; rightPadding: 18
         property bool primary: false
-        contentItem: Label { text: button.text; color: button.enabled ? button.primary ? "#0b1721" : "#f7f9fd" : "#637087"; font.family: "Microsoft YaHei UI"; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-        background: Rectangle { radius: 11; color: button.enabled && button.primary ? "#5de0ea" : "#172134"; border.color: "#34465f" }
+        contentItem: LocalizedLabel { sourceText: button.text; color: button.enabled ? button.primary ? "#162214" : "#f3ecd9" : "#89856c"; font.family: backend.uiFontFamily; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+        background: Rectangle { radius: 11; color: button.enabled && button.primary ? "#8fbd83" : "#353025"; border.color: "#65573f" }
     }
     contentItem: ColumnLayout {
         spacing: 16
         RowLayout { Layout.fillWidth: true
-            Label { text:"新手教程 · " + (guide.step + 1) + " / " + guide.steps.length; color:"#5de0ea"; font.pixelSize:13; Layout.fillWidth:true }
+            LocalizedLabel { sourceText:"新手教程 · " + (guide.step + 1) + " / " + guide.steps.length; color:"#8fbd83"; font.pixelSize:13; Layout.fillWidth:true }
             ActionButton { visible: guide.controller.onboardingCompleted; text:"关闭"; onClicked: guide.close() }
         }
         RowLayout { Layout.fillWidth: true; spacing: 8
             Repeater { model: guide.steps.length
-                Rectangle { required property int index; Layout.fillWidth:true; height:4; radius:2; color:index <= guide.step ? "#5de0ea" : "#27344a" }
+                Rectangle { required property int index; Layout.fillWidth:true; height:4; radius:2; color:index <= guide.step ? "#8fbd83" : "#443e2e" }
             }
         }
-        Label { Layout.fillWidth:true; text:guide.steps[guide.step].title; font.family:"Microsoft YaHei UI"; font.pixelSize:23; font.bold:true; color:"#f7f9fd"; wrapMode:Text.WordWrap }
-        Label { Layout.fillWidth:true; text:guide.steps[guide.step].body; font.family:"Microsoft YaHei UI"; font.pixelSize:14; lineHeight:1.3; color:"#d1daeb"; wrapMode:Text.WordWrap }
+        LocalizedLabel { Layout.fillWidth:true; sourceText:guide.steps[guide.step].title; font.family:backend.uiFontFamily; font.pixelSize:23; font.bold:true; color:"#f3ecd9"; wrapMode:Text.WordWrap }
+        LocalizedLabel { Layout.fillWidth:true; sourceText:guide.steps[guide.step].body; font.family:backend.uiFontFamily; font.pixelSize:14; lineHeight:1.3; color:"#ded7c0"; wrapMode:Text.WordWrap }
         Rectangle {
-            visible: guide.lastStep; Layout.fillWidth:true; Layout.preferredHeight:94; color:"#09101b"; radius:12; border.color:"#34465f"
+            visible: guide.lastStep; Layout.fillWidth:true; Layout.preferredHeight:94; color:"#101b13"; radius:12; border.color:"#65573f"
             RowLayout { anchors.fill:parent; anchors.margins:16; spacing:16
                 ColumnLayout { Layout.fillWidth:true; spacing:5
-                    Label { text:"安全硬上限"; color:"#f7c55b"; font.pixelSize:15; font.bold:true }
-                    Label { text:"请输入整数，留空不能完成"; color:"#8e9aaf"; font.pixelSize:11 }
+                    LocalizedLabel { sourceText:"安全硬上限"; color:"#e6be73"; font.pixelSize:15; font.bold:true }
+                    LocalizedLabel { sourceText:"请输入整数，留空不能完成"; color:"#aaa68d"; font.pixelSize:11 }
                 }
                 TextField {
                     id:capInput; objectName:"onboardingCapInput"
                     Layout.preferredWidth:130; Layout.preferredHeight:50
-                    placeholderText:"0–100"; color:"#f7f9fd"; placeholderTextColor:"#637087"
+                    placeholderText:"0–100"; color:"#f3ecd9"; placeholderTextColor:"#89856c"
                     font.pixelSize:22; horizontalAlignment:Text.AlignHCenter
                     inputMethodHints:Qt.ImhDigitsOnly
                     validator:IntValidator { bottom:0; top:100 }
-                    background:Rectangle { radius:10; color:"#172134"; border.color:capInput.activeFocus ? "#5de0ea" : "#34465f" }
+                    background:Rectangle { radius:10; color:"#353025"; border.color:capInput.activeFocus ? "#8fbd83" : "#65573f" }
                 }
             }
         }
-        Label { Layout.fillWidth:true; text:guide.steps[guide.step].hint; color:guide.lastStep ? "#f7c55b" : "#8e9aaf"; font.family:"Microsoft YaHei UI"; font.pixelSize:12; lineHeight:1.2; wrapMode:Text.WordWrap }
-        Label { visible:guide.lastStep && guide.controller.onboardingError !== ""; Layout.fillWidth:true; text:guide.controller.onboardingError; color:"#ff5d7a"; wrapMode:Text.WordWrap }
+        LocalizedLabel { Layout.fillWidth:true; sourceText:guide.steps[guide.step].hint; color:guide.lastStep ? "#e6be73" : "#aaa68d"; font.family:backend.uiFontFamily; font.pixelSize:12; lineHeight:1.2; wrapMode:Text.WordWrap }
+        LocalizedLabel { visible:guide.lastStep && guide.controller.onboardingError !== ""; Layout.fillWidth:true; sourceText:guide.controller.onboardingError; color:"#ff5d7a"; wrapMode:Text.WordWrap }
         Item { Layout.fillHeight:true }
         RowLayout { Layout.fillWidth:true
             ActionButton { objectName:"onboardingBack"; text:"上一步"; enabled:guide.step > 0; onClicked:--guide.step }

@@ -147,13 +147,13 @@ class CaptureTests(unittest.TestCase):
             target = Path(directory) / "settings.json"
             policies = default_channel_policies()
             for policy in policies.values():
-                policy["rules"].pop("capture_start")
+                policy["rules"].pop("capture_start", None)
                 policy["rules"].pop("struggle")
             policies["B"]["rules"]["hit_small"]["custom_strength"] = 19
             target.write_text(json.dumps({"channel_policies": policies}), encoding="utf-8")
             config = ProductConfig(target)
             self.assertEqual(config.values["channel_policies"]["B"]["rules"]["hit_small"]["custom_strength"], 19)
-            self.assertTrue(config.values["channel_policies"]["B"]["rules"]["capture_start"]["enabled"])
+            self.assertTrue(config.values["channel_policies"]["B"]["rules"]["struggle"]["enabled"])
 
     def test_old_short_struggle_becomes_medium_hold_preserving_custom_wave(self):
         from ricca_dglab.product_config import sanitize_channel_policies
@@ -166,6 +166,25 @@ class CaptureTests(unittest.TestCase):
         legacy["custom_strength"] = 12
         rule = sanitize_channel_policies(policies)["B"]["rules"]["struggle"]
         self.assertEqual(rule["custom_strength"], 12)
+
+    def test_capture_start_is_diagnostic_only_and_old_alias_preserves_wave(self):
+        from ricca_dglab.product_config import sanitize_channel_policies
+        policies = default_channel_policies()
+        policies["B"]["rules"].pop("struggle")
+        policies["B"]["rules"]["capture_start"] = dict(enabled=True, tier="low", wave="impact",
+                                                       custom_strength=18, duration=.5)
+        migrated = sanitize_channel_policies(policies)
+        rule = migrated["B"]["rules"]["struggle"]
+        self.assertEqual((rule["wave"], rule["custom_strength"], rule["duration"]), ("impact", 18, None))
+        self.assertNotIn("capture_start", migrated["B"]["rules"])
+        mapper = RiccaMappingEngine(channel_policies=migrated)
+        mapper.accept([GameEvent(1, 1, "now", "capture_start", "captured")])
+        self.assertEqual(mapper.preview(READY, 1).strength_b, 0)
+        for now in (1, 10, 60):
+            mapper.reconcile_capture(snapshot(), now=now)
+            self.assertEqual(mapper.preview(READY, now).strength_b, 18)
+        mapper.reconcile_capture(snapshot("0x0", acceptance=False), now=60.1)
+        self.assertEqual(mapper.preview(READY, 60.1).strength_b, 0)
 
     def test_recorded_vine_states_replay_as_progress_then_end(self):
         project = Path(__file__).resolve().parents[1]

@@ -11,6 +11,8 @@ node_modules/
 artifacts/
 .analysis/
 HolyKnightRicca_v141en/
+HolyKnightRicca_v141zh/
+release/
 Ricca-Look-Library/
 *.log
 *.jsonl

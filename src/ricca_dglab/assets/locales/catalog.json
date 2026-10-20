@@ -1,0 +1,2732 @@
+{
+  "全局急停键不可用": ["Global emergency hotkey unavailable", "グローバル緊急停止キーが使用できません"],
+  "全局急停快捷键": ["Global emergency hotkey", "グローバル緊急停止キー"],
+  "全局急停键": ["Emergency hotkey", "緊急停止キー"],
+  "全局快捷键未注册": ["Global hotkey is not registered", "グローバルキーは未登録です"],
+  "全局急停快捷键已注册": ["Global emergency hotkey registered", "緊急停止キーを登録しました"],
+  "快捷键注册超时，请重试": ["Hotkey registration timed out; retry", "キー登録がタイムアウトしました。再試行してください"],
+  "快捷键被占用或无法注册，请更换组合": ["Hotkey is occupied or unavailable; choose another chord", "キーが使用中または登録できません。別の組み合わせを選んでください"],
+  "快捷键需包含至少两个修饰键（Ctrl、Alt、Shift）和一个按键": ["Use at least two modifiers (Ctrl, Alt, Shift) and one key", "修飾キー（Ctrl・Alt・Shift）を2つ以上と、通常キーを1つ指定してください"],
+  "请选择 F1–F11、字母、数字、Space、Home、End、Insert、Delete 或 Pause": ["Choose F1–F11, a letter, digit, Space, Home, End, Insert, Delete or Pause", "F1～F11、英字、数字、Space、Home、End、Insert、Delete、Pause に対応します"],
+  "Ctrl+Alt+Delete 是系统保留组合，不能使用": ["Ctrl+Alt+Delete is reserved by Windows", "Ctrl+Alt+Delete はシステム予約キーです"],
+  "游戏在前台也可归零并锁定全部输出；再次按下不会恢复。默认 Ctrl+Alt+F10。": ["Zeros and latches all output even with the game in front. Pressing again never resumes. Default: Ctrl+Alt+F10.", "ゲームが前面でも全出力をゼロにしてロックします。再度押しても再開しません。既定：Ctrl+Alt+F10。"],
+  "输入至少两个修饰键和一个按键，例如 Ctrl+Shift+F9。支持 F1–F11、字母、数字等；不支持 Win、F12 或系统保留组合。": ["Enter at least two modifiers and one key, e.g. Ctrl+Shift+F9. Supports F1–F11, letters and digits. Win, F12 and reserved system chords are excluded.", "修飾キーを2つ以上と通常キーを入力（例：Ctrl+Shift+F9）。F1～F11・英字・数字等に対応。Win・F12・システム予約キーは使用できません。"],
+  "保存时会先急停并保持暂停。占用或保存失败时保留原设置，成功后仍需手动恢复输出。": ["Saving first emergency-stops output. Conflicts or save failures retain the original setting. Output stays paused; resume manually.", "保存時は先に緊急停止します。競合・保存失敗時は元の設定を保持。成功後も停止を維持し、再開は手動です。"],
+  "保存快捷键": ["Save hotkey", "キーを保存"],
+  "急停快捷键已保存，输出保持暂停，请手动恢复": ["Emergency hotkey saved; output stays paused. Resume manually.", "緊急停止キーを保存しました。出力は停止中です。手動で再開してください。"],
+  "音频队列最低强度": ["Audio queue floor", "音声キュー最低強度"],
+  "音频队列最低强度已保存": ["Audio queue minimum intensity saved", "音声キューの最低強度を保存しました"],
+  "仅循环＋音频：语音空隙维持此强度；0 关闭。自动保存，休止段与安全暂停仍归零。": ["Loop + audio only: holds this intensity between voices; 0 disables. Saves automatically. Rest segments and safety pauses still output zero.", "ループ＋音声のみ：声の合間もこの強度を維持。0 で無効、自動保存。休止区間・安全停止中は出力しません。"],
+  "强度增益": ["Intensity gain", "強度ゲイン"],
+  "音频强度增益已保存": ["Audio intensity gain saved", "音声強度ゲインを保存しました"],
+  "向右增强，0× 静音；松开后自动保存并应用。静音门控在后台处理，旧参数保留。": ["Move right for stronger output; 0× mutes. Release to save and apply. Silence gating stays internal; previous parameters are retained.", "右へ動かすと強くなり、0× でミュート。離すと自動保存・適用します。無音ゲートは内部で処理し、従来の設定は保持します。"],
+  "增益作用于音频映射及音频队列，不改变战斗、死亡惩罚或安全上限。休止段仍无输出。": ["Gain affects audio mapping and audio queues only, not combat, death penalties or the safety cap. Rest segments remain silent.", "ゲインは音声マッピングと音声キューのみに適用。戦闘・死亡ペナルティ・ハード上限は変更せず、休止区間は出力しません。"],
+  "中": [
+    "Medium",
+    "中"
+  ],
+  "低": [
+    "Low",
+    "低"
+  ],
+  "无": [
+    "None",
+    "なし"
+  ],
+  "高": [
+    "High",
+    "高"
+  ],
+  " 秒": [
+    " s",
+    " 秒"
+  ],
+  "中档": [
+    "Medium",
+    "中"
+  ],
+  "低 ": [
+    "Low ",
+    "低 "
+  ],
+  "低档": [
+    "Low",
+    "低"
+  ],
+  "全部": [
+    "All",
+    "すべて"
+  ],
+  "关闭": [
+    "Off",
+    "オフ"
+  ],
+  "冲击": [
+    "Impact",
+    "インパクト"
+  ],
+  "动作": [
+    "Actions",
+    "アクション"
+  ],
+  "取消": [
+    "Cancel",
+    "キャンセル"
+  ],
+  "可用": [
+    "Available",
+    "利用可能"
+  ],
+  "呼吸": [
+    "Breathing",
+    "呼吸"
+  ],
+  "就绪": [
+    "Ready",
+    "準備完了"
+  ],
+  "平滑": [
+    "Smooth",
+    "平滑化"
+  ],
+  "待机": [
+    "Idle",
+    "待機"
+  ],
+  "心跳": [
+    "Heartbeat",
+    "心拍"
+  ],
+  "按钮": [
+    "Button",
+    "ボタン"
+  ],
+  "撤销": [
+    "Undo",
+    "元に戻す"
+  ],
+  "旁白": [
+    "Narrator",
+    "ナレーション"
+  ],
+  "格挡": [
+    "Guard",
+    "ガード"
+  ],
+  "死亡": [
+    "Death",
+    "死亡"
+  ],
+  "清空": [
+    "Clear",
+    "クリア"
+  ],
+  "渐强": [
+    "Crescendo",
+    "クレッシェンド"
+  ],
+  "轻触": [
+    "Tap",
+    "タップ"
+  ],
+  "重做": [
+    "Redo",
+    "やり直す"
+  ],
+  "镜像": [
+    "Mirror",
+    "反転"
+  ],
+  "阶梯": [
+    "Steps",
+    "ステップ"
+  ],
+  "预览": [
+    "Preview",
+    "プレビュー"
+  ],
+  "频率": [
+    "Frequency",
+    "周波数"
+  ],
+  "高档": [
+    "High",
+    "高"
+  ],
+  " 约束": [
+    " limit",
+    "の制限"
+  ],
+  " 通道": [
+    " channel",
+    " チャンネル"
+  ],
+  " 队列": [
+    " queue",
+    " キュー"
+  ],
+  "上一步": [
+    "Back",
+    "戻る"
+  ],
+  "下一步": [
+    "Next",
+    "次へ"
+  ],
+  "不可用": [
+    "Unavailable",
+    "利用不可"
+  ],
+  "中强度": [
+    "Medium intensity",
+    "中強度"
+  ],
+  "事件流": [
+    "Event stream",
+    "イベント一覧"
+  ],
+  "仅记录": [
+    "Record only",
+    "記録のみ"
+  ],
+  "低强度": [
+    "Low intensity",
+    "低強度"
+  ],
+  "保存 ": [
+    "Save ",
+    "保存 "
+  ],
+  "剧情段": [
+    "Story segment",
+    "シナリオ区間"
+  ],
+  "加载中": [
+    "Loading",
+    "読み込み中"
+  ],
+  "受困中": [
+    "Captured",
+    "拘束中"
+  ],
+  "可挣扎": [
+    "Can struggle",
+    "抵抗可能"
+  ],
+  "已保存": [
+    "Saved",
+    "保存済み"
+  ],
+  "已应用": [
+    "Applied",
+    "適用済み"
+  ],
+  "已暂停": [
+    "Paused",
+    "一時停止中"
+  ],
+  "已破甲": [
+    "Armor broken",
+    "防具破損"
+  ],
+  "已连接": [
+    "Connected",
+    "接続済み"
+  ],
+  "已选择": [
+    "Selected",
+    "選択済み"
+  ],
+  "归一化": [
+    "Normalize",
+    "正規化"
+  ],
+  "当前：": [
+    "Current: ",
+    "現在："
+  ],
+  "无提示": [
+    "No hint",
+    "ヒントなし"
+  ],
+  "未保存": [
+    "Unsaved",
+    "未保存"
+  ],
+  "未受困": [
+    "Not captured",
+    "拘束なし"
+  ],
+  "未就绪": [
+    "Not ready",
+    "未準備"
+  ],
+  "未破甲": [
+    "Armor intact",
+    "防具正常"
+  ],
+  "未绑定": [
+    "Not paired",
+    "未ペアリング"
+  ],
+  "未进入": [
+    "Not entered",
+    "未進入"
+  ],
+  "本窗口": [
+    "This window",
+    "このウィンドウ"
+  ],
+  "死亡档": [
+    "Death",
+    "死亡"
+  ],
+  "灵敏度": [
+    "Sensitivity",
+    "感度"
+  ],
+  "用于 ": [
+    "Use for ",
+    "対象："
+  ],
+  "端口 ": [
+    "Port ",
+    "ポート "
+  ],
+  "等级 ": [
+    "Level ",
+    "レベル "
+  ],
+  "自定义": [
+    "Custom",
+    "カスタム"
+  ],
+  "节点 ": [
+    "Point ",
+    "ポイント "
+  ],
+  "记录 ": [
+    "Records ",
+    "記録 "
+  ],
+  "配置：": [
+    "Settings: ",
+    "設定："
+  ],
+  "高强度": [
+    "High intensity",
+    "高強度"
+  ],
+  " 个波形": [
+    " waveforms",
+    " 波形"
+  ],
+  " 已通过": [
+    " passed",
+    " 確認済み"
+  ],
+  "A 通道": [
+    "Channel A",
+    "A チャンネル"
+  ],
+  "B 通道": [
+    "Channel B",
+    "B チャンネル"
+  ],
+  "·自定义": [
+    " · Custom",
+    "・カスタム"
+  ],
+  "中 · ": [
+    "Medium · ",
+    "中・"
+  ],
+  "中档预设": [
+    "Medium preset",
+    "中プリセット"
+  ],
+  "事件筛选": [
+    "Filter events",
+    "絞り込み"
+  ],
+  "二维码：": [
+    "QR code: ",
+    "QR コード："
+  ],
+  "互动循环": [
+    "Interaction loop",
+    "インタラクションループ"
+  ],
+  "伤害回落": [
+    "Damage decay",
+    "ダメージ減衰"
+  ],
+  "低 · ": [
+    "Low · ",
+    "低・"
+  ],
+  "低档预设": [
+    "Low preset",
+    "低プリセット"
+  ],
+  "保存备注": [
+    "Save note",
+    "メモを保存"
+  ],
+  "保存失败": [
+    "Save failed",
+    "保存に失敗"
+  ],
+  "保存成功": [
+    "Saved",
+    "保存しました"
+  ],
+  "停用循环": [
+    "Disable loop",
+    "ループ無効"
+  ],
+  "其他进程": [
+    "Other process",
+    "別のプロセス"
+  ],
+  "内置波形": [
+    "Built-in",
+    "内蔵波形"
+  ],
+  "刷新地址": [
+    "Refresh IPs",
+    "アドレス更新"
+  ],
+  "刷新设备": [
+    "Refresh devices",
+    "デバイス更新"
+  ],
+  "刷新诊断": [
+    "Refresh diagnostics",
+    "診断を更新"
+  ],
+  "剧情信号": [
+    "Story signals",
+    "シナリオ信号"
+  ],
+  "剧情行 ": [
+    "Story line ",
+    "シナリオ行 "
+  ],
+  "剧情音频": [
+    "Story audio",
+    "シナリオ音声"
+  ],
+  "动作反馈": [
+    "Action feedback",
+    "アクション反応"
+  ],
+  "动画停止": [
+    "Animation stopped",
+    "アニメーション停止"
+  ],
+  "原始快照": [
+    "Raw snapshot",
+    "生データ"
+  ],
+  "启用循环": [
+    "Enable loop",
+    "ループ有効"
+  ],
+  "噪声门限": [
+    "Noise gate",
+    "ノイズゲート"
+  ],
+  "固定波形": [
+    "Fixed waveform",
+    "固定波形"
+  ],
+  "固定预设": [
+    "Fixed preset",
+    "固定プリセット"
+  ],
+  "场景循环": [
+    "Scene loop",
+    "シーンループ"
+  ],
+  "场景模式": [
+    "Scene mode",
+    "シーンモード"
+  ],
+  "复制诊断": [
+    "Copy diagnostics",
+    "診断をコピー"
+  ],
+  "始终使用": [
+    "Always use",
+    "常に使用"
+  ],
+  "安全上限": [
+    "Safety cap",
+    "安全上限"
+  ],
+  "安全待机": [
+    "Safe standby",
+    "安全待機"
+  ],
+  "官方波形": [
+    "Official",
+    "公式波形"
+  ],
+  "实时总览": [
+    "Overview",
+    "リアルタイム概要"
+  ],
+  "实时输出": [
+    "Live output",
+    "実出力"
+  ],
+  "实时音频": [
+    "Live audio",
+    "リアルタイム音声"
+  ],
+  "尚未测试": [
+    "Not tested",
+    "未テスト"
+  ],
+  "工作范围": [
+    "Activation",
+    "動作範囲"
+  ],
+  "开始防御": [
+    "Guard started",
+    "ガード開始"
+  ],
+  "强度方案": [
+    "Intensity profiles",
+    "強度プロファイル"
+  ],
+  "当前动作": [
+    "Current action",
+    "現在のアクション"
+  ],
+  "当前章节": [
+    "Current chapter",
+    "現在のチャプター"
+  ],
+  "当前选择": [
+    "Selected",
+    "選択中"
+  ],
+  "循环播放": [
+    "Loop playback",
+    "ループ再生"
+  ],
+  "循环队列": [
+    "Loop queue",
+    "ループキュー"
+  ],
+  "恢复自动": [
+    "Resume auto",
+    "自動検出を再開"
+  ],
+  "恢复输出": [
+    "Resume",
+    "出力再開"
+  ],
+  "恢复默认": [
+    "Restore defaults",
+    "初期設定に戻す"
+  ],
+  "悬停预览": [
+    "Hover to preview",
+    "ホバーでプレビュー"
+  ],
+  "战斗反馈": [
+    "Combat feedback",
+    "戦闘フィードバック"
+  ],
+  "战斗来源": [
+    "Combat source",
+    "戦闘の信号源"
+  ],
+  "打开目录": [
+    "Open folder",
+    "フォルダーを開く"
+  ],
+  "护甲破碎": [
+    "Armor break",
+    "防具破損"
+  ],
+  "持续方式": [
+    "Lifetime",
+    "継続条件"
+  ],
+  "持续时间": [
+    "Duration",
+    "継続時間"
+  ],
+  "捕获结束": [
+    "Capture ended",
+    "拘束終了"
+  ],
+  "撞墙反弹": [
+    "Wall bounce",
+    "壁への衝突"
+  ],
+  "播放方式": [
+    "Playback mode",
+    "再生方式"
+  ],
+  "操作失败": [
+    "Operation failed",
+    "操作に失敗"
+  ],
+  "新建波形": [
+    "New waveform",
+    "波形を作成"
+  ],
+  "新手教程": [
+    "Getting started",
+    "初めての方へ"
+  ],
+  "无法启用": [
+    "Cannot enable",
+    "有効にできません"
+  ],
+  "无法记录": [
+    "Cannot record",
+    "記録できません"
+  ],
+  "普通受击": [
+    "Normal damage",
+    "通常ダメージ"
+  ],
+  "智能分段": [
+    "Event mapping",
+    "イベント別"
+  ],
+  "暂停输出": [
+    "Pause",
+    "出力停止"
+  ],
+  "最近事件": [
+    "Recent events",
+    "最近のイベント"
+  ],
+  "未知进程": [
+    "Unknown process",
+    "不明なプロセス"
+  ],
+  "格挡命中": [
+    "Guard contact",
+    "ガード成功"
+  ],
+  "检测状态": [
+    "Detection",
+    "検出状態"
+  ],
+  "模拟预览": [
+    "Simulation",
+    "シミュレーション"
+  ],
+  "死亡惩罚": [
+    "Death penalty",
+    "死亡ペナルティ"
+  ],
+  "波形名称": [
+    "Waveform name",
+    "波形名"
+  ],
+  "演示模式": [
+    "Demo mode",
+    "デモモード"
+  ],
+  "玩家倒下": [
+    "Player down",
+    "プレイヤー死亡"
+  ],
+  "登记失败": [
+    "Registration failed",
+    "登録に失敗"
+  ],
+  "监听关闭": [
+    "Listening off",
+    "音声取得オフ"
+  ],
+  "监听开启": [
+    "Listening on",
+    "音声取得オン"
+  ],
+  "确认启用": [
+    "Enable",
+    "有効にする"
+  ],
+  "确认恢复": [
+    "Restore",
+    "復元する"
+  ],
+  "确认接管": [
+    "Confirm takeover",
+    "引き継ぎを確認"
+  ],
+  "确认登记": [
+    "Register",
+    "登録する"
+  ],
+  "空中受击": [
+    "Air hit",
+    "空中被弾"
+  ],
+  "等待进程": [
+    "Waiting for process",
+    "プロセス待機中"
+  ],
+  "紧急归零": [
+    "STOP",
+    "緊急停止"
+  ],
+  "背向倒地": [
+    "Backward knockdown",
+    "後方への転倒"
+  ],
+  "自动连接": [
+    "Auto-connect",
+    "自動接続"
+  ],
+  "记录失败": [
+    "Recording failed",
+    "記録に失敗"
+  ],
+  "设备断开": [
+    "Device disconnected",
+    "デバイス切断"
+  ],
+  "读取失败": [
+    "Read failed",
+    "読み取り失敗"
+  ],
+  "败北互动": [
+    "Defeat interaction",
+    "敗北インタラクション"
+  ],
+  "转换参数": [
+    "Mapping parameters",
+    "変換パラメーター"
+  ],
+  "轻微伤害": [
+    "Light damage",
+    "軽いダメージ"
+  ],
+  "轻微硬直": [
+    "Light stagger",
+    "軽いひるみ"
+  ],
+  "输出暂停": [
+    "Output paused",
+    "出力一時停止"
+  ],
+  "输出通道": [
+    "Output channel",
+    "出力チャンネル"
+  ],
+  "连接服务": [
+    "Connect to server",
+    "サーバーに接続"
+  ],
+  "连接设置": [
+    "Connection",
+    "接続設定"
+  ],
+  "连续受击": [
+    "Repeated hits",
+    "連続被弾"
+  ],
+  "通用捕获": [
+    "Capture",
+    "拘束"
+  ],
+  "通道策略": [
+    "Channel strategy",
+    "チャンネル設定"
+  ],
+  "重击倒地": [
+    "Heavy knockdown",
+    "強打による転倒"
+  ],
+  "重度伤害": [
+    "Heavy damage",
+    "大ダメージ"
+  ],
+  "音频共感": [
+    "Audio sync",
+    "音声連動"
+  ],
+  "音频来源": [
+    "Audio source",
+    "音声ソース"
+  ],
+  "高 · ": [
+    "High · ",
+    "高・"
+  ],
+  "高档预设": [
+    "High preset",
+    "高プリセット"
+  ],
+  "默认关闭": [
+    "Off by default",
+    "初期状態はオフ"
+  ],
+  " · 中 ": [
+    " · Medium ",
+    "・中 "
+  ],
+  " · 第 ": [
+    " · Step ",
+    "・ステップ "
+  ],
+  " · 高 ": [
+    " · High ",
+    "・高 "
+  ],
+  " 通道策略": [
+    " channel strategy",
+    " チャンネル設定"
+  ],
+  "HP 伤害": [
+    "HP damage",
+    "HP ダメージ"
+  ],
+  "个性化范围": [
+    "Intensity range",
+    "強度設定"
+  ],
+  "中伤害 ≤": [
+    "Medium damage ≤",
+    "中ダメージ ≤"
+  ],
+  "保存并应用": [
+    "Save & apply",
+    "保存して適用"
+  ],
+  "动作 · ": [
+    "Action · ",
+    "動作・"
+  ],
+  "固定＋音频": [
+    "Fixed + audio",
+    "固定＋音声"
+  ],
+  "场景记录库": [
+    "Scene library",
+    "シーン記録一覧"
+  ],
+  "安全上限 ": [
+    "Safety cap ",
+    "安全上限 "
+  ],
+  "安全硬上限": [
+    "Hard safety cap",
+    "安全ハード上限"
+  ],
+  "官方·呼吸": [
+    "Official · Breathing",
+    "公式・呼吸"
+  ],
+  "官方·弹跳": [
+    "Official · Bouncy",
+    "公式・バウンス"
+  ],
+  "官方·心跳": [
+    "Official · Heartbeat",
+    "公式・心拍"
+  ],
+  "官方·涟漪": [
+    "Official · Ripple",
+    "公式・波紋"
+  ],
+  "官方·渐强": [
+    "Official · Gradual",
+    "公式・漸強"
+  ],
+  "官方·潮汐": [
+    "Official · Tide",
+    "公式・潮汐"
+  ],
+  "官方·连击": [
+    "Official · Pulsating",
+    "公式・連打"
+  ],
+  "实时输出中": [
+    "Output active",
+    "実出力中"
+  ],
+  "小伤害 ≤": [
+    "Light damage ≤",
+    "小ダメージ ≤"
+  ],
+  "已恢复自动": [
+    "Auto resumed",
+    "自動検出再開"
+  ],
+  "已恢复默认": [
+    "Defaults restored",
+    "初期設定に復元済み"
+  ],
+  "已连接游戏": [
+    "Game connected",
+    "ゲーム接続済み"
+  ],
+  "应用并保存": [
+    "Apply & save",
+    "適用して保存"
+  ],
+  "循环已启用": [
+    "Loop enabled",
+    "ループ有効"
+  ],
+  "循环＋音频": [
+    "Queue + audio",
+    "ループ＋音声"
+  ],
+  "总开关关闭": [
+    "Master switch off",
+    "マスタースイッチはオフ"
+  ],
+  "恢复已保存": [
+    "Revert to saved",
+    "保存済みに戻す"
+  ],
+  "我的波形库": [
+    "My waveforms",
+    "マイ波形"
+  ],
+  "扫描二维码": [
+    "Scan QR code",
+    "QR コードをスキャン"
+  ],
+  "捕获与挣扎": [
+    "Capture & struggle",
+    "拘束と抵抗"
+  ],
+  "排查建议：": [
+    "Troubleshooting:",
+    "確認項目："
+  ],
+  "放弃并切换": [
+    "Discard & switch",
+    "破棄して切替"
+  ],
+  "教程已完成": [
+    "Setup complete",
+    "初期設定完了"
+  ],
+  "日志会话：": [
+    "Log session: ",
+    "ログセッション："
+  ],
+  "最近记录 ": [
+    "Last recorded ",
+    "最終記録 "
+  ],
+  "服务错误：": [
+    "Server error: ",
+    "サーバーエラー："
+  ],
+  "正在测试 ": [
+    "Testing ",
+    "テスト中 "
+  ],
+  "正在监听 ": [
+    "Listening to ",
+    "音声取得中 "
+  ],
+  "此通道关闭": [
+    "Channel disabled",
+    "チャンネル無効"
+  ],
+  "死亡 · ": [
+    "Death · ",
+    "死亡・"
+  ],
+  "波形工作台": [
+    "Waveform studio",
+    "波形スタジオ"
+  ],
+  "游戏已恢复": [
+    "Game resumed",
+    "ゲーム再開"
+  ],
+  "游戏已暂停": [
+    "Game paused",
+    "ゲーム一時停止"
+  ],
+  "端口监听：": [
+    "Port listener: ",
+    "ポート待受："
+  ],
+  "网络适配器": [
+    "Network adapters",
+    "ネットワークアダプター"
+  ],
+  "自定义强度": [
+    "Custom intensity",
+    "カスタム強度"
+  ],
+  "自定义数值": [
+    "Custom value",
+    "数値を指定"
+  ],
+  "自定义波形": [
+    "Custom waveforms",
+    "カスタム波形"
+  ],
+  "设备与游戏": [
+    "Device & game",
+    "デバイスとゲーム"
+  ],
+  "设备已连接": [
+    "Device connected",
+    "デバイス接続済み"
+  ],
+  "诊断与事件": [
+    "Diagnostics & events",
+    "診断とイベント"
+  ],
+  "输入电平 ": [
+    "Input level ",
+    "入力レベル "
+  ],
+  "输出已暂停": [
+    "Output paused",
+    "出力一時停止中"
+  ],
+  "运行日志：": [
+    "Runtime log: ",
+    "実行ログ："
+  ],
+  "进入设备页": [
+    "Open device page",
+    "デバイス画面を開く"
+  ],
+  "连接不上？": [
+    "Can't connect?",
+    "接続できない？"
+  ],
+  "连接地址：": [
+    "Connection address: ",
+    "接続先："
+  ],
+  "高强度惩罚": [
+    "Major penalties",
+    "高強度ペナルティ"
+  ],
+  " · 上限 ": [
+    " · Cap ",
+    "・上限 "
+  ],
+  " · 丢弃 ": [
+    " · Dropped ",
+    "・破棄 "
+  ],
+  " · 手机：": [
+    " · Phone: ",
+    "・スマホ："
+  ],
+  " · 护甲 ": [
+    " · Armor ",
+    "・防具 "
+  ],
+  " · 死亡 ": [
+    " · Death ",
+    "・死亡 "
+  ],
+  " · 输出中": [
+    " · Active",
+    "・出力中"
+  ],
+  " · 错误 ": [
+    " · Error ",
+    "・エラー "
+  ],
+  "依次完成四步": [
+    "Follow these four steps",
+    "順に 4 ステップ"
+  ],
+  "保存并应用 ": [
+    "Save & apply ",
+    "保存して適用 "
+  ],
+  "停止自动收集": [
+    "Stop collecting",
+    "自動収集を停止"
+  ],
+  "关闭剧情输出": [
+    "Story output off",
+    "シナリオ出力オフ"
+  ],
+  "关闭整个通道": [
+    "Disable channel",
+    "チャンネル全体を無効"
+  ],
+  "启用音频共感": [
+    "Enable audio sync",
+    "音声連動を有効化"
+  ],
+  "场景尚未记录": [
+    "Scene not recorded",
+    "シーン未記録"
+  ],
+  "场景循环结束": [
+    "Scene loop ended",
+    "シーンループ終了"
+  ],
+  "安全硬上限 ": [
+    "Hard safety cap ",
+    "安全ハード上限 "
+  ],
+  "实时输出请求": [
+    "Live output request",
+    "実出力の要求"
+  ],
+  "实时音频信号": [
+    "Live audio signal",
+    "リアルタイム音声信号"
+  ],
+  "尚无有效场景": [
+    "No valid scene yet",
+    "有効なシーンなし"
+  ],
+  "应用固定波形": [
+    "Apply fixed waveform",
+    "固定波形を適用"
+  ],
+  "应用音频设置": [
+    "Apply audio settings",
+    "音声設定を適用"
+  ],
+  "开启自动收集": [
+    "Start collecting",
+    "自動収集を開始"
+  ],
+  "恢复当前设置": [
+    "Revert changes",
+    "現在の設定に戻す"
+  ],
+  "恢复普通输出": [
+    "Resume normal",
+    "通常出力再開"
+  ],
+  "打开记录目录": [
+    "Open records folder",
+    "記録フォルダーを開く"
+  ],
+  "挣扎进度增加": [
+    "Struggle progressed",
+    "抵抗ゲージ増加"
+  ],
+  "捕获读取失效": [
+    "Capture read invalid",
+    "拘束情報の読み取り無効"
+  ],
+  "敏感度已重置": [
+    "Sensitivity reset",
+    "感度リセット"
+  ],
+  "普通受击动作": [
+    "Normal hit action",
+    "通常被弾アクション"
+  ],
+  "暂停普通输出": [
+    "Pause normal",
+    "通常出力停止"
+  ],
+  "正在连接游戏": [
+    "Connecting to game",
+    "ゲームに接続中"
+  ],
+  "游戏遥测在线": [
+    "Game telemetry online",
+    "ゲーム情報の取得中"
+  ],
+  "独立窗口编辑": [
+    "Separate editor",
+    "別ウィンドウで編集"
+  ],
+  "生命恢复 +": [
+    "HP recovered +",
+    "HP 回復 +"
+  ],
+  "等待剧情场景": [
+    "Waiting for story scene",
+    "シナリオシーン待機中"
+  ],
+  "等待手机连接": [
+    "Waiting for phone",
+    "スマホ接続待ち"
+  ],
+  "等待游戏遥测": [
+    "Waiting for telemetry",
+    "ゲーム情報を待機中"
+  ],
+  "等待设备连接": [
+    "Waiting for device",
+    "デバイス接続待ち"
+  ],
+  "累计受伤 −": [
+    "Damage taken −",
+    "累積ダメージ −"
+  ],
+  "编辑当前波形": [
+    "Edit waveform",
+    "現在の波形を編集"
+  ],
+  "记录当前场景": [
+    "Record scene",
+    "現在のシーンを記録"
+  ],
+  "设置保存失败": [
+    "Settings save failed",
+    "設定の保存に失敗"
+  ],
+  "败北场景结束": [
+    "Defeat scene ended",
+    "敗北シーン終了"
+  ],
+  "进入败北场景": [
+    "Entered defeat scene",
+    "敗北シーン開始"
+  ],
+  "音频实时包络": [
+    "Live audio envelope",
+    "リアルタイム音声包絡"
+  ],
+  "音频状态未知": [
+    "Audio status unknown",
+    "音声状態不明"
+  ],
+  "预览波形  ": [
+    "Preview waveform  ",
+    "波形プレビュー  "
+  ],
+  "＋ 添加一段": [
+    "+ Add segment",
+    "＋ 区間を追加"
+  ],
+  " · 白名单 ": [
+    " · Registered ",
+    "・登録済み "
+  ],
+  " · 硬上限 ": [
+    " · Hard cap ",
+    "・ハード上限 "
+  ],
+  " 个脚本 · ": [
+    " scripts · ",
+    " スクリプト・"
+  ],
+  " 已停用循环。": [
+    " loop disabled.",
+    " のループを無効にしました。"
+  ],
+  " 通道测试完成": [
+    " channel test complete",
+    " チャンネルテスト完了"
+  ],
+  "A 通道 · ": [
+    "Channel A · ",
+    "A チャンネル・"
+  ],
+  "B 通道 · ": [
+    "Channel B · ",
+    "B チャンネル・"
+  ],
+  "Boss 捕获": [
+    "Boss capture",
+    "ボスによる拘束"
+  ],
+  "HP + 动作": [
+    "HP + actions",
+    "HP ＋アクション"
+  ],
+  "三段金属感阶梯": [
+    "Three metallic steps",
+    "金属的な 3 段ステップ"
+  ],
+  "不接收战斗事件": [
+    "No combat events",
+    "戦闘イベントを受信しない"
+  ],
+  "互动状态不可用": [
+    "Interaction unavailable",
+    "インタラクション情報なし"
+  ],
+  "休止（无输出）": [
+    "Rest (no output)",
+    "休止（出力なし）"
+  ],
+  "伤害后快速衰减": [
+    "Rapid decay after damage",
+    "ダメージ後に急減衰"
+  ],
+  "剧情 / 鉴赏": [
+    "Story / Gallery",
+    "シナリオ／鑑賞"
+  ],
+  "剧情控制器在线": [
+    "Story controller online",
+    "シナリオ制御オンライン"
+  ],
+  "剧情音频 → ": [
+    "Story audio → ",
+    "シナリオ音声 → "
+  ],
+  "固定波形已应用": [
+    "Fixed waveform applied",
+    "固定波形を適用済み"
+  ],
+  "场景循环 · ": [
+    "Scene loop · ",
+    "シーンループ・"
+  ],
+  "场景循环已停用": [
+    "Scene loop disabled",
+    "シーンループ無効"
+  ],
+  "场景循环已暂停": [
+    "Scene loop paused",
+    "シーンループ一時停止"
+  ],
+  "场景控制器切换": [
+    "Scene controller changed",
+    "シーン制御の切り替え"
+  ],
+  "场景记录 · ": [
+    "Scene records · ",
+    "シーン記録・"
+  ],
+  "实时输出已关闭": [
+    "Live output disabled",
+    "実出力を無効化"
+  ],
+  "实时输出已启用": [
+    "Live output enabled",
+    "実出力を有効化"
+  ],
+  "已恢复自动检测": [
+    "Automatic detection restored",
+    "自動検出を復元"
+  ],
+  "已执行安全归零": [
+    "Safe zero applied",
+    "安全に出力をゼロ化"
+  ],
+  "强度档位已保存": [
+    "Intensity tiers saved",
+    "強度段階を保存済み"
+  ],
+  "强度设置未保存": [
+    "Intensity not saved",
+    "強度設定は未保存"
+  ],
+  "录音输入 · ": [
+    "Recording input · ",
+    "録音入力・"
+  ],
+  "恢复自动检测？": [
+    "Restore auto detection?",
+    "自動検出に戻しますか？"
+  ],
+  "挣扎进度 · ": [
+    "Struggle progress · ",
+    "抵抗の進捗・"
+  ],
+  "控制连接异常：": [
+    "Control connection error: ",
+    "制御接続エラー："
+  ],
+  "新手教程 · ": [
+    "Getting started · ",
+    "初期設定ガイド・"
+  ],
+  "新手教程已完成": [
+    "Getting started complete",
+    "初期設定ガイド完了"
+  ],
+  "无法监听端口 ": [
+    "Cannot listen on port ",
+    "ポートで待受できません："
+  ],
+  "检测到打击停顿": [
+    "Hit stop detected",
+    "ヒットストップを検出"
+  ],
+  "检测到捕获对象": [
+    "Capture object detected",
+    "拘束オブジェクトを検出"
+  ],
+  "死亡惩罚·渐强": [
+    "Death penalty · Ramp",
+    "死亡ペナルティ・漸強"
+  ],
+  "游戏路径未保存": [
+    "Game path not saved",
+    "ゲームのパス未保存"
+  ],
+  "版本校验失败：": [
+    "Build validation failed: ",
+    "バージョン検証に失敗："
+  ],
+  "独立检测已启用": [
+    "Independent detection enabled",
+    "独立検出を有効化"
+  ],
+  "确认恢复默认？": [
+    "Restore defaults?",
+    "初期設定に戻しますか？"
+  ],
+  "等待 / 暂停": [
+    "Waiting / Paused",
+    "待機／一時停止"
+  ],
+  "等待游戏事件…": [
+    "Waiting for game events…",
+    "ゲームイベント待機中…"
+  ],
+  "系统回环 · ": [
+    "System loopback · ",
+    "システムループバック・"
+  ],
+  "系统地址 · ": [
+    "System address · ",
+    "システムアドレス・"
+  ],
+  "自动记录已停止": [
+    "Auto-recording stopped",
+    "自動記録停止"
+  ],
+  "自动记录已关闭": [
+    "Auto-recording off",
+    "自動記録オフ"
+  ],
+  "自动记录已开启": [
+    "Auto-recording on",
+    "自動記録オン"
+  ],
+  "输出已紧急停止": [
+    "Emergency stop applied",
+    "緊急停止しました"
+  ],
+  "输出暂停已解除": [
+    "Output pause cleared",
+    "出力一時停止を解除"
+  ],
+  "通道策略未保存": [
+    "Channel strategy not saved",
+    "チャンネル設定は未保存"
+  ],
+  "重拍与渐强回拍": [
+    "Strong beat with rising echoes",
+    "強い拍と漸強する返し"
+  ],
+  "音频共感已关闭": [
+    "Audio sync off",
+    "音声連動オフ"
+  ],
+  "音频共感已启用": [
+    "Audio sync enabled",
+    "音声連動を有効化"
+  ],
+  " · 教程完成 ": [
+    " · Setup complete ",
+    "・初期設定完了 "
+  ],
+  " · 最大生命 ": [
+    " · Max HP ",
+    "・最大 HP "
+  ],
+  " · 输出已暂停": [
+    " · Output paused",
+    "・出力一時停止"
+  ],
+  " 段 · 剩余 ": [
+    " segments · Remaining ",
+    " 区間・残り "
+  ],
+  " 通道策略已保存": [
+    " channel strategy saved",
+    " チャンネル設定を保存済み"
+  ],
+  "A/B 波形监视": [
+    "A/B waveform monitor",
+    "A/B 波形モニター"
+  ],
+  "PULSE 强度": [
+    "PULSE intensity",
+    "PULSE 強度"
+  ],
+  "Ricca 共感": [
+    "Ricca sync",
+    "Ricca 連動"
+  ],
+  "三组清晰强弱连击": [
+    "Three distinct alternating bursts",
+    "強弱が明瞭な 3 組の連打"
+  ],
+  "事件映射保存失败": [
+    "Event mapping save failed",
+    "イベント割当の保存に失敗"
+  ],
+  "保存到我的波形库": [
+    "Save to my waveforms",
+    "マイ波形に保存"
+  ],
+  "分别保存通道策略": [
+    "A/B strategies",
+    "A/B を設定"
+  ],
+  "剧情场景阶段变化": [
+    "Story phase changed",
+    "シナリオ段階の変化"
+  ],
+  "固定波形保存失败": [
+    "Fixed waveform save failed",
+    "固定波形の保存に失敗"
+  ],
+  "场景备注已保存。": [
+    "Scene note saved.",
+    "シーンのメモを保存しました。"
+  ],
+  "恢复自动检测失败": [
+    "Auto detection restore failed",
+    "自動検出への復帰に失敗"
+  ],
+  "恢复默认映射失败": [
+    "Mapping reset failed",
+    "既定割当の復元に失敗"
+  ],
+  "打开波形目录失败": [
+    "Cannot open waveform folder",
+    "波形フォルダーを開けません"
+  ],
+  "接管当前败北互动": [
+    "Take over defeat interaction",
+    "現在の敗北インタラクションを引継"
+  ],
+  "无法解析游戏路径": [
+    "Cannot resolve game path",
+    "ゲームのパスを解決できません"
+  ],
+  "游戏路径保存失败": [
+    "Game path save failed",
+    "ゲームのパス保存に失敗"
+  ],
+  "游戏路径已保存；": [
+    "Game path saved; ",
+    "ゲームのパスを保存しました："
+  ],
+  "玩家对象重新绑定": [
+    "Player object rebound",
+    "プレイヤーを再接続"
+  ],
+  "用户关闭实时输出": [
+    "Live output disabled by user",
+    "ユーザーが実出力を無効化"
+  ],
+  "自动检测失败回退": [
+    "Detection fallback",
+    "自動検出失敗時の代替"
+  ],
+  "自定义波形已保存": [
+    "Custom waveform saved",
+    "カスタム波形を保存済み"
+  ],
+  "自定义波形编辑器": [
+    "Waveform editor",
+    "カスタム波形エディター"
+  ],
+  "自定义波形设计器": [
+    "Waveform designer",
+    "カスタム波形デザイナー"
+  ],
+  "败北 CG · ": [
+    "Defeat CG · ",
+    "敗北 CG・"
+  ],
+  "败北场景阶段变化": [
+    "Defeat scene phase changed",
+    "敗北シーン段階の変化"
+  ],
+  "输出已关闭 · ": [
+    "Output off · ",
+    "出力オフ・"
+  ],
+  "选择游戏 EXE": [
+    "Select game EXE",
+    "ゲーム EXE を選択"
+  ],
+  "通道策略保存失败": [
+    "Channel strategy save failed",
+    "チャンネル設定の保存に失敗"
+  ],
+  "音频共感设置失败": [
+    "Audio sync settings failed",
+    "音声連動設定に失敗"
+  ],
+  "音频总开关已启用": [
+    "Audio master switch on",
+    "音声マスタースイッチはオン"
+  ],
+  "高起点后分段衰减": [
+    "High start with stepped decay",
+    "高い始点から段階的に減衰"
+  ],
+  "（虚拟/VPN）": [
+    " (Virtual/VPN)",
+    "（仮想／VPN）"
+  ],
+  " 通道 · 强度 ": [
+    " channel · Intensity ",
+    " チャンネル・強度 "
+  ],
+  "CG · 剧情输出": [
+    "CG · Story output",
+    "CG・シナリオ出力"
+  ],
+  "DG-LAB 官方": [
+    "DG-LAB official",
+    "DG-LAB 公式"
+  ],
+  "Ricca 自定义": [
+    "Ricca custom",
+    "Ricca カスタム"
+  ],
+  "Socket 错误": [
+    "Socket error",
+    "Socket エラー"
+  ],
+  "中文": [
+    "中文",
+    "中文"
+  ],
+  "日本語": [
+    "日本語",
+    "日本語"
+  ],
+  "界面语言已保存": [
+    "Interface language saved",
+    "表示言語を保存しました"
+  ],
+  "事件映射已恢复默认": [
+    "Event mapping reset",
+    "イベント割当を初期設定に復元"
+  ],
+  "分段逐级加强并回落": [
+    "Progressive steps with release",
+    "段階的に強まり減衰"
+  ],
+  "剧情 / 鉴赏策略": [
+    "Story / Gallery strategy",
+    "シナリオ／鑑賞の設定"
+  ],
+  "剧情音频（旧包络）": [
+    "Story audio (legacy envelope)",
+    "シナリオ音声（旧包絡）"
+  ],
+  "四拍起伏并持续变频": [
+    "Four-beat pattern with changing frequency",
+    "4 拍の起伏と連続変調"
+  ],
+  "已启用游戏路径回退": [
+    "Game path fallback enabled",
+    "ゲームパスによる代替検出を有効化"
+  ],
+  "已确认当前败北互动": [
+    "Defeat interaction confirmed",
+    "現在の敗北インタラクションを確認"
+  ],
+  "强弱交替的碎裂反馈": [
+    "Alternating armor-break feedback",
+    "強弱が交互の破損フィードバック"
+  ],
+  "当前不在剧情对话中": [
+    "No story dialogue active",
+    "シナリオ会話中ではありません"
+  ],
+  "恢复已保存的队列？": [
+    "Revert to the saved queue?",
+    "保存済みのキューに戻しますか？"
+  ],
+  "恢复默认通道策略？": [
+    "Restore default channel strategies?",
+    "チャンネル設定を初期状態に戻しますか？"
+  ],
+  "所选音频设备不存在": [
+    "Selected audio device not found",
+    "選択した音声デバイスが見つかりません"
+  ],
+  "无法识别场景库格式": [
+    "Unknown scene library format",
+    "シーン一覧の形式を認識できません"
+  ],
+  "普通受击与常规动作": [
+    "Normal hits and actions",
+    "通常の被弾とアクション"
+  ],
+  "普通受击的快速冲击": [
+    "Quick impact for a normal hit",
+    "通常被弾時の素早い衝撃"
+  ],
+  "正在打开音频设备…": [
+    "Opening audio device…",
+    "音声デバイスを開いています…"
+  ],
+  "游戏版本未通过校验": [
+    "Game build not verified",
+    "ゲームのバージョンが未検証です"
+  ],
+  "登记 34 个场景": [
+    "Register 34 scenes",
+    "34 シーンを登録"
+  ],
+  "短促、低存在感反馈": [
+    "Brief subtle feedback",
+    "短く控えめなフィードバック"
+  ],
+  "缓慢抬升并留出休止": [
+    "Slow rise followed by a rest",
+    "緩やかに上昇して休止"
+  ],
+  "编辑队列 → 剧情": [
+    "Edit queue → Story",
+    "キュー編集 → シナリオ"
+  ],
+  "自定义波形保存失败": [
+    "Custom waveform save failed",
+    "カスタム波形の保存に失敗"
+  ],
+  "设备发送看门狗超时": [
+    "Device send watchdog timeout",
+    "デバイス送信監視がタイムアウト"
+  ],
+  "轻微伤害与轻微硬直": [
+    "Light damage and stagger",
+    "軽いダメージとひるみ"
+  ],
+  "进入已登记剧情场景": [
+    "Entered a registered story scene",
+    "登録済みシナリオに進入"
+  ],
+  "重复弹跳并提高频率": [
+    "Repeated bounce with rising frequency",
+    "周波数が上がる反復バウンス"
+  ],
+  "重试 Socket": [
+    "Retry Socket",
+    "Socket を再試行"
+  ],
+  "音频共感设置未保存": [
+    "Audio sync settings not saved",
+    "音声連動設定は未保存"
+  ],
+  "音频总开关当前关闭": [
+    "Audio master switch is off",
+    "音声マスタースイッチはオフです"
+  ],
+  "频率与包络连续推进": [
+    "Continuous frequency and envelope changes",
+    "周波数と包絡が連続的に変化"
+  ],
+  " · 剧情 / 回想": [
+    " · Story / Gallery",
+    "・シナリオ／回想"
+  ],
+  "DG-LAB 已断开": [
+    "DG-LAB disconnected",
+    "DG-LAB 切断"
+  ],
+  "DG-LAB 已连接": [
+    "DG-LAB connected",
+    "DG-LAB 接続済み"
+  ],
+  "HUD 设置保存失败": [
+    "HUD settings save failed",
+    "HUD 設定の保存に失敗"
+  ],
+  "Ricca 外部遥测": [
+    "Ricca external telemetry",
+    "Ricca 外部テレメトリー"
+  ],
+  "两次冲击之间快速回落": [
+    "Quick release between two impacts",
+    "2 回の衝撃の間に急減衰"
+  ],
+  "初始化 Socket": [
+    "Initialize Socket",
+    "Socket を初期化"
+  ],
+  "双通道单次重惩罚包络": [
+    "Single penalty envelope for both channels",
+    "両チャンネルの単発ペナルティ包絡"
+  ],
+  "启用这个场景的循环？": [
+    "Enable looping for this scene?",
+    "このシーンのループを有効にしますか？"
+  ],
+  "外部只读 · 无注入": [
+    "External read-only · No injection",
+    "外部読み取り専用・注入なし"
+  ],
+  "所选 EXE 不存在": [
+    "Selected EXE not found",
+    "選択した EXE が見つかりません"
+  ],
+  "波形预设与我的波形库": [
+    "Presets & my waveforms",
+    "プリセットとマイ波形"
+  ],
+  "玩家死亡时的独立强度": [
+    "Separate intensity for player death",
+    "死亡時の独立した強度"
+  ],
+  "系统回环（默认）· ": [
+    "System loopback (default) · ",
+    "システムループバック（既定）・"
+  ],
+  "重击、撞墙与护甲破碎": [
+    "Heavy hits, wall impacts and armor breaks",
+    "強打・壁への衝突・防具破損"
+  ],
+  "队列为空 · 不输出": [
+    "Empty queue · No output",
+    "キューが空・出力なし"
+  ],
+  " 通道低强度测试准备中": [
+    " channel low-intensity test preparing",
+    " チャンネルの低強度テストを準備中"
+  ],
+  "Boss 捕获保持关闭": [
+    "Boss capture remains off",
+    "ボス拘束はオフのまま"
+  ],
+  "DG-LAB 连接步骤": [
+    "DG-LAB connection steps",
+    "DG-LAB 接続手順"
+  ],
+  "HP · 超出为重伤害": [
+    "HP · Above this is heavy damage",
+    "HP・超過分は大ダメージ"
+  ],
+  "保存失败，未完成教程：": [
+    "Save failed; setup incomplete: ",
+    "保存失敗・初期設定未完了："
+  ],
+  "剧情 Pulse 队列": [
+    "Story Pulse queue",
+    "シナリオ Pulse キュー"
+  ],
+  "可用 IPv4 网卡：": [
+    "Available IPv4 adapters: ",
+    "利用可能な IPv4 アダプター："
+  ],
+  "强度已归零，队列已清空": [
+    "Intensity zeroed; queue cleared",
+    "強度をゼロにしてキューを消去済み"
+  ],
+  "持续捕获 · 直至挣脱": [
+    "Capture hold · Until escape",
+    "拘束継続・脱出まで"
+  ],
+  "放弃未保存的强度调整？": [
+    "Discard unsaved intensity changes?",
+    "未保存の強度変更を破棄しますか？"
+  ],
+  "无法读取端口占用信息：": [
+    "Cannot read port ownership: ",
+    "ポート使用情報を取得できません："
+  ],
+  "点击暂停场景及普通输出": [
+    "Click to pause story and normal output",
+    "クリックでシーンと通常出力を停止"
+  ],
+  "登记这 34 个场景？": [
+    "Register these 34 scenes?",
+    "この 34 シーンを登録しますか？"
+  ],
+  "确认接管当前败北互动？": [
+    "Take over this defeat interaction?",
+    "現在の敗北インタラクションを引き継ぎますか？"
+  ],
+  "等待 Ricca 进程": [
+    "Waiting for Ricca",
+    "Ricca の起動待ち"
+  ],
+  "编辑 B 剧情队列 →": [
+    "Edit B story queue →",
+    "B のシナリオキューを編集 →"
+  ],
+  "适合连续伤害的交替节奏": [
+    "Alternating rhythm for repeated damage",
+    "連続ダメージ向けの交互リズム"
+  ],
+  " · 紧急归零可立即停止": [
+    " · STOP cancels immediately",
+    "・緊急停止で即座に停止"
+  ],
+  " 通道测试中 · 强度 ": [
+    " channel test · Intensity ",
+    " チャンネルテスト中・強度 "
+  ],
+  " 通道的 CG 剧情循环": [
+    " channel CG loop",
+    " チャンネルの CG ループ"
+  ],
+  "Socket 服务异常：": [
+    "Socket server error: ",
+    "Socket サーバー異常："
+  ],
+  "个性化范围：快速设置强度": [
+    "Intensity range: quick setup",
+    "強度設定：かんたん設定"
+  ],
+  "实时总览：先核对游戏状态": [
+    "Overview: check game status first",
+    "概要：まずゲーム状態を確認"
+  ],
+  "实时音频包络（自动生成）": [
+    "Live audio envelope (generated)",
+    "リアルタイム音声包絡（自動生成）"
+  ],
+  "所选游戏 EXE 不存在": [
+    "Selected game EXE not found",
+    "選択したゲーム EXE が見つかりません"
+  ],
+  "未启用（模拟/测试模式）": [
+    "Disabled (simulation/test)",
+    "無効（シミュレーション／テスト）"
+  ],
+  "波形工作台：调整更多细节": [
+    "Waveform studio: fine tuning",
+    "波形スタジオ：詳細設定"
+  ],
+  "用户自定义 16 点包络": [
+    "User-defined 16-point envelope",
+    "ユーザー定義の 16 点包絡"
+  ],
+  "设置共感档位与安全硬上限": [
+    "Set intensity tiers and the hard safety cap",
+    "連動強度と安全ハード上限を設定"
+  ],
+  "请先记录并核对这个场景。": [
+    "Record and verify this scene first.",
+    "先にこのシーンを記録・確認してください。"
+  ],
+  "请输入整数，留空不能完成": [
+    "Enter an integer; a value is required",
+    "整数を入力してください。空欄では完了できません"
+  ],
+  "读取 TCP 端口表失败": [
+    "Cannot read TCP port table",
+    "TCP ポート一覧の取得に失敗"
+  ],
+  "败北 CG · 等待遥测": [
+    "Defeat CG · Waiting for telemetry",
+    "敗北 CG・ゲーム情報待ち"
+  ],
+  " · 波形缺失，当前段静默": [
+    " · Missing waveform; segment muted",
+    "・波形なし、この区間は無音"
+  ],
+  "HUD 设置已保存并应用。": [
+    "HUD settings saved and applied.",
+    "HUD 設定を保存して適用しました。"
+  ],
+  "Socket 已就绪 · ": [
+    "Socket ready · ",
+    "Socket 準備完了・"
+  ],
+  "停止捕获与挣扎 Pulse": [
+    "Stop capture/struggle Pulse",
+    "拘束・抵抗 Pulse を停止"
+  ],
+  "切换通道并放弃未保存修改？": [
+    "Switch channel and discard changes?",
+    "未保存の変更を破棄して切り替えますか？"
+  ],
+  "战斗动作 / 剧情音频队列": [
+    "Combat actions / story audio queue",
+    "戦闘アクション／シナリオ音声キュー"
+  ],
+  "战斗动作 → 剧情音频队列": [
+    "Combat actions → story audio queue",
+    "戦闘アクション → シナリオ音声キュー"
+  ],
+  "拖动卡片区域或使用滚轮浏览": [
+    "Drag cards or scroll to browse",
+    "カードをドラッグ、またはスクロール"
+  ],
+  "持续至挣脱 · 不按秒计时": [
+    "Until escape · No timer",
+    "脱出まで継続・秒数指定なし"
+  ],
+  "未记录本次败北 · 不输出": [
+    "No recorded defeat · No output",
+    "今回の敗北は未記録・出力なし"
+  ],
+  "本次会话有效 · 硬上限 ": [
+    "Active this session · Hard cap ",
+    "このセッションで有効・ハード上限 "
+  ],
+  "独立来源、强度、波形与时长": [
+    "Separate source, intensity, waveform and duration",
+    "信号源・強度・波形・時間を個別設定"
+  ],
+  "队列包含无效或缺失的波形。": [
+    "Queue contains invalid or missing waveforms.",
+    "キューに無効または存在しない波形があります。"
+  ],
+  "队列须包含 1–16 段。": [
+    "Queue must contain 1–16 segments.",
+    "キューは 1～16 区間にしてください。"
+  ],
+  " · 优先输出 · 硬上限 ": [
+    " · Priority output · Hard cap ",
+    "・優先出力・ハード上限 "
+  ],
+  "DG-LAB App 已断开": [
+    "DG-LAB App disconnected",
+    "DG-LAB アプリ切断"
+  ],
+  "HP 归零 · 等待场景确认": [
+    "HP zero · Confirming scene",
+    "HP ゼロ・シーン確認待ち"
+  ],
+  "事件强度与波形已保存并应用。": [
+    "Event intensity and waveform saved and applied.",
+    "イベントの強度と波形を保存・適用しました。"
+  ],
+  "保存失败，请查看诊断与事件。": [
+    "Save failed. See Diagnostics & events.",
+    "保存に失敗しました。診断とイベントを確認してください。"
+  ],
+  "剧情实时音频包络（兼容模式）": [
+    "Story audio envelope (legacy mode)",
+    "シナリオ音声包絡（互換モード）"
+  ],
+  "实时输出已启用 · 硬上限 ": [
+    "Live output enabled · Hard cap ",
+    "実出力有効・ハード上限 "
+  ],
+  "已恢复自动检测，等待有效遥测": [
+    "Auto detection restored; waiting for valid telemetry",
+    "自動検出を復元、有効な情報を待機中"
+  ],
+  "当前安全待机 · 可预先暂停": [
+    "Safe standby · You can pause in advance",
+    "安全待機中・事前に一時停止可能"
+  ],
+  "最后一步：手动设置安全硬上限": [
+    "Final step: enter your hard safety cap",
+    "最後に：安全ハード上限を手動入力"
+  ],
+  "正在启动 Socket 服务": [
+    "Starting Socket server",
+    "Socket サーバー起動中"
+  ],
+  "正在重新启动 Socket…": [
+    "Restarting Socket…",
+    "Socket を再起動中…"
+  ],
+  "死亡惩罚仅由「紧急归零」停止": [
+    "Only STOP cancels the death penalty",
+    "死亡ペナルティの解除は「緊急停止」のみ"
+  ],
+  "没有检测到录音或系统回环设备": [
+    "No recording or system loopback device found",
+    "録音・システムループバックデバイスなし"
+  ],
+  "游戏状态、角色与事件输出总览": [
+    "Game, player and event output at a glance",
+    "ゲーム・キャラクター・イベント出力の概要"
+  ],
+  "游戏路径已修改，等待有效遥测": [
+    "Game path changed; waiting for valid telemetry",
+    "ゲームパス変更、有効な情報を待機中"
+  ],
+  "等待 DG-LAB 设备连接": [
+    "Waiting for DG-LAB device",
+    "DG-LAB デバイスの接続待ち"
+  ],
+  "策略中有已删除或不可用的波形": [
+    "Strategy contains deleted or unavailable waveforms",
+    "設定に削除済み・利用不可の波形があります"
+  ],
+  "请选择游戏的 .exe 文件": [
+    "Select the game's .exe file",
+    "ゲームの .exe ファイルを選択してください"
+  ],
+  "输出仍受事件档位与硬上限限制": [
+    "Output remains limited by event tiers and hard cap",
+    "出力はイベント強度とハード上限の範囲内"
+  ],
+  "连接后自动同步 · 硬上限 ": [
+    "Auto-sync on connection · Hard cap ",
+    "接続後に自動連動・ハード上限 "
+  ],
+  "连接后自动输出 · 硬上限 ": [
+    "Auto-output on connection · Hard cap ",
+    "接続後に自動出力・ハード上限 "
+  ],
+  "选择官方预设或创建自定义波形": [
+    "Choose official presets or create a waveform",
+    "公式プリセットの選択・カスタム波形の作成"
+  ],
+  "逐项核对指针、动作与触发边沿": [
+    "Inspect pointers, actions and event edges",
+    "ポインター・アクション・トリガーを確認"
+  ],
+  " → 0 · 倍率 ×1.00": [
+    " → 0 · Multiplier ×1.00",
+    " → 0・倍率 ×1.00"
+  ],
+  " 通道测试完成 · 还需测试 ": [
+    " channel test complete · Still test ",
+    " チャンネルのテスト完了・残り "
+  ],
+  "DG-LAB 3.0 连接向导": [
+    "DG-LAB 3.0 connection guide",
+    "DG-LAB 3.0 接続ガイド"
+  ],
+  "中伤害上限必须大于小伤害上限。": [
+    "Medium damage threshold must exceed the light threshold.",
+    "中ダメージの閾値は小ダメージより大きくしてください。"
+  ],
+  "修改后需应用；关闭后不采集声音": [
+    "Apply after changes; off means no audio capture",
+    "変更後は適用が必要です。オフでは音声を取得しません"
+  ],
+  "场景剧情 · 循环 Pulse": [
+    "Story scene · Loop Pulse",
+    "シナリオシーン・ループ Pulse"
+  ],
+  "手动路径已验证 · 支持此版本": [
+    "Manual path verified · Supported build",
+    "手動パス確認済み・対応バージョン"
+  ],
+  "正在启动 Socket 服务…": [
+    "Starting Socket server…",
+    "Socket サーバー起動中…"
+  ],
+  "独立配置 · 重叠时较强者接管": [
+    "Independent setup · Stronger feedback takes over",
+    "個別設定・重複時は強い方を優先"
+  ],
+  "登记场景内循环 · 离开即解除": [
+    "Loop in registered scenes · Stop on exit",
+    "登録シーン内でループ・退出で解除"
+  ],
+  "设备与游戏：连接 DG-LAB": [
+    "Device & game: connect DG-LAB",
+    "デバイスとゲーム：DG-LAB を接続"
+  ],
+  "输出更新超时，已撤销授权并归零": [
+    "Output updates timed out; authorization cleared and output zeroed",
+    "出力更新がタイムアウト。許可を解除して出力をゼロ化"
+  ],
+  "遥测超过 500 ms 未更新": [
+    "Telemetry not updated for over 500 ms",
+    "ゲーム情報が 500 ms 以上更新されていません"
+  ],
+  " 已记录；不会因此自动启用输出。": [
+    " recorded; output is not enabled automatically.",
+    " を記録しました。出力は自動で有効になりません。"
+  ],
+  "剧情信号与循环 Pulse 队列": [
+    "Story signals and looping Pulse queues",
+    "シナリオ信号とループ Pulse キュー"
+  ],
+  "待应用 · 点击下方应用音频设置": [
+    "Not applied · Apply audio settings below",
+    "未適用・下の音声設定を適用してください"
+  ],
+  "无法建立 Ricca 单实例保护": [
+    "Cannot create Ricca single-instance guard",
+    "Ricca の多重起動防止を作成できません"
+  ],
+  "查看两个通道的当前波形和预览强度": [
+    "View both channels' waveforms and preview intensity",
+    "両チャンネルの波形とプレビュー強度を確認"
+  ],
+  "连接地址已切换，请核对并重新扫码": [
+    "Address changed; verify it and scan the QR code again",
+    "接続先を変更しました。確認して再スキャンしてください"
+  ],
+  "手动路径已保存 · 游戏版本未适配": [
+    "Manual path saved · Unsupported game build",
+    "手動パス保存済み・未対応バージョン"
+  ],
+  "等待有效游戏遥测 · A/B 归零": [
+    "Waiting for valid telemetry · A/B zeroed",
+    "有効なゲーム情報待ち・A/B はゼロ"
+  ],
+  "紧急停止：A/B 已归零并清空队列": [
+    "Emergency stop: A/B zeroed and queues cleared",
+    "緊急停止：A/B をゼロにしてキューを消去"
+  ],
+  "缺少 SoundCard 音频模块": [
+    "SoundCard audio module missing",
+    "SoundCard 音声モジュールがありません"
+  ],
+  "自动输出已撤销，A/B 队列已清空": [
+    "Auto-output revoked; A/B queues cleared",
+    "自動出力を解除、A/B キューを消去"
+  ],
+  "自定义波形必须包含 16 个控制点": [
+    "Custom waveform requires 16 control points",
+    "カスタム波形には 16 個の制御点が必要です"
+  ],
+  "自定义队列 → 剧情（保存并跳转）": [
+    "Custom queue → Story (save & open)",
+    "カスタムキュー → シナリオ（保存して移動）"
+  ],
+  "请选择可用的音频输入或系统回环设备": [
+    "Select an available input or system loopback device",
+    "利用可能な音声入力かシステムループバックを選択"
+  ],
+  "；此处不会自动改规则或关闭防火墙。": [
+    "; rules and firewall are never changed automatically here.",
+    "。ここでは規則の変更やファイアウォールの無効化は行いません。"
+  ],
+  " 通道测试未启动 · 请检查设备连接": [
+    " channel test not started · Check device connection",
+    " チャンネルテスト未開始・接続を確認してください"
+  ],
+  "34 个已收集场景已登记；白名单共 ": [
+    "34 collected scenes registered; total allowlist: ",
+    "収集済みの 34 シーンを登録。許可リスト合計："
+  ],
+  "Windows 程序 (*.exe)": [
+    "Windows applications (*.exe)",
+    "Windows プログラム (*.exe)"
+  ],
+  "不会接收 HP、动作或剧情音频信号。": [
+    "No HP, action or story audio signals are received.",
+    "HP・アクション・シナリオ音声の信号を受信しません。"
+  ],
+  "事件映射已修改，清空旧事件后自动应用": [
+    "Event mapping changed; old events cleared before applying",
+    "イベント割当変更。古いイベントを消去して適用"
+  ],
+  "启动游戏并进入可操作场景后会自动绑定": [
+    "Start the game and enter gameplay to bind automatically",
+    "ゲームを起動し、操作可能なシーンに入ると自動接続"
+  ],
+  "实时输出已启用 · 当前被安全门归零": [
+    "Live output enabled · Currently zeroed by safety gate",
+    "実出力有効・現在は安全制御によりゼロ"
+  ],
+  "未指定路径 · 默认按进程名自动查找": [
+    "No path set · Auto-detect by process name",
+    "パス未指定・プロセス名で自動検索"
+  ],
+  "档位跟随个性化范围 · 当前硬上限 ": [
+    "Tiers follow Intensity range · Hard cap ",
+    "強度は強度設定に従う・ハード上限 "
+  ],
+  "此通道整体关闭，包括剧情和死亡惩罚。": [
+    "Entire channel is disabled, including story and death penalties.",
+    "シナリオ・死亡ペナルティを含め、このチャンネル全体が無効です。"
+  ],
+  "行号、说话人与正文变化会记录为事件。": [
+    "Line, speaker and text changes appear as events.",
+    "行番号・話者・本文の変化をイベントに表示します。"
+  ],
+  "请先完成新手教程并手动保存安全硬上限": [
+    "Complete setup and manually save a hard safety cap first",
+    "先に初期設定を完了し、安全ハード上限を手動保存してください"
+  ],
+  " · 保存后自动应用，保留手动暂停状态": [
+    " · Applies on save; manual pause is retained",
+    "・保存後に適用、手動停止状態を維持"
+  ],
+  " 通道策略已修改，清空旧事件后自动应用": [
+    " channel strategy changed; old events cleared before applying",
+    " チャンネル設定変更。古いイベントを消去して適用"
+  ],
+  "0 禁用设备输出，所有命令不能突破此值": [
+    "0 disables device output; no command can exceed this cap",
+    "0 でデバイス出力を無効化。すべての命令がこの上限に従います"
+  ],
+  "休止段：本通道归零，不叠加其他剧情音频": [
+    "Rest segment: channel zeroed; no other story audio is added",
+    "休止区間：出力をゼロにし、他のシナリオ音声は重ねません"
+  ],
+  "只放弃当前未保存的修改，不恢复出厂值。": [
+    "Discard only unsaved changes, not restore factory defaults.",
+    "未保存の変更だけを破棄し、初期設定には戻しません。"
+  ],
+  "安全硬上限已修改，清空旧事件后自动应用": [
+    "Hard safety cap changed; old events cleared before applying",
+    "安全ハード上限変更。古いイベントを消去して適用"
+  ],
+  "实时输出已启用 · 所有命令受硬上限 ": [
+    "Live output enabled · All commands capped at ",
+    "実出力有効・すべての命令のハード上限 "
+  ],
+  "新手教程已打开，完成后自动应用安全上限": [
+    "Setup opened; safety cap applies when completed",
+    "初期設定を開きました。完了後に安全上限を適用"
+  ],
+  "波形在本段内重复播放，结束后切换下一段": [
+    "Waveform repeats within this segment, then advances",
+    "この区間内で波形を反復し、終了後に次へ進みます"
+  ],
+  "事件映射已恢复默认，清空旧事件后自动应用": [
+    "Default event mapping restored; old events cleared before applying",
+    "イベント割当を初期化。古いイベントを消去して適用"
+  ],
+  "原场景库读取失败，为避免覆盖已取消保存：": [
+    "Scene library read failed; save cancelled to avoid overwrite: ",
+    "既存シーン一覧を読み取れないため、上書きを避けて保存を中止："
+  ],
+  "固定波形策略已修改，清空旧事件后自动应用": [
+    "Fixed waveform changed; old events cleared before applying",
+    "固定波形設定変更。古いイベントを消去して適用"
+  ],
+  "备注，例如：Goblin 对话 / 城堡": [
+    "Note, e.g. Goblin dialogue / Castle",
+    "メモの例：Goblin の会話／城"
+  ],
+  "安全硬上限为 0 · 所有设备输出已禁用": [
+    "Hard cap is 0 · All device output disabled",
+    "ハード上限 0・すべてのデバイス出力が無効"
+  ],
+  "沿用实机验证的自定义包络；不提高设备强度": [
+    "Device-tested custom envelope; does not increase intensity",
+    "実機確認済みのカスタム包絡。デバイス強度は上げません"
+  ],
+  "游戏、场景、HP、动作与护甲遥测均已就绪": [
+    "Game, scene, HP, action and armor telemetry ready",
+    "ゲーム・シーン・HP・アクション・防具情報の取得準備完了"
+  ],
+  "请在通道的剧情 / 鉴赏策略选择音频模式": [
+    "Choose an audio mode in Story / Gallery strategy",
+    "チャンネルのシナリオ／鑑賞設定で音声モードを選択"
+  ],
+  "音频共感设置已修改，清空旧事件后自动应用": [
+    "Audio sync changed; old events cleared before applying",
+    "音声連動設定変更。古いイベントを消去して適用"
+  ],
+  " · 败北 CG 入场及互动按通道规则输出": [
+    " · Defeat CG and interaction follow channel rules",
+    "・敗北 CG とインタラクションはチャンネル設定に従う"
+  ],
+  " 已启用循环，遵循当前通道策略与暂停状态。": [
+    " looping enabled; channel strategy and pause state are respected.",
+    " のループを有効化。現在のチャンネル設定と停止状態に従います。"
+  ],
+  "原配置归档发生冲突，已保留原文件并取消保存": [
+    "Config archive conflict; original retained and save cancelled",
+    "設定の退避で競合。元ファイルを保持し保存を中止"
+  ],
+  "强度或安全上限已修改，清空旧事件后自动应用": [
+    "Intensity/cap changed; old events cleared before applying",
+    "強度・安全上限変更。古いイベントを消去して適用"
+  ],
+  "当前未受困 · 逃脱后残留计数不计入进度。": [
+    "Not captured · Residual counts after escape are ignored.",
+    "拘束なし・脱出後の残りカウントは進捗に含みません。"
+  ],
+  "等待 ADV / ATD / ANV 剧情": [
+    "Waiting for ADV / ATD / ANV story",
+    "ADV / ATD / ANV シナリオ待ち"
+  ],
+  "请手动输入 0–100 的整数安全硬上限。": [
+    "Manually enter an integer hard safety cap from 0–100.",
+    "0～100 の整数で安全ハード上限を手動入力してください。"
+  ],
+  " 已保存并应用；连接后按当前游戏状态自动输出": [
+    " saved and applied; output follows game state after connection",
+    " を保存・適用。接続後は現在のゲーム状態に応じて自動出力"
+  ],
+  "无法读取 GameAssembly.dll：": [
+    "Cannot read GameAssembly.dll: ",
+    "GameAssembly.dll を読み取れません："
+  ],
+  "等待 Gameplay 或 ADV 安全场景": [
+    "Waiting for safe Gameplay or ADV scene",
+    "安全な Gameplay または ADV シーン待ち"
+  ],
+  "音频须开启监听；＋音频只缩放强度，静音归零。": [
+    "Enable listening for audio modes; audio scales intensity and silence outputs zero.",
+    "音声モードは取得をオンにしてください。音量で強度を調整し、無音時はゼロになります。"
+  ],
+  "三次有效采样后接管循环；不补发未记录的死亡惩罚": [
+    "Take over after 3 valid samples; no unrecorded death penalty is replayed",
+    "有効な 3 回の取得後にループを引継。未記録の死亡ペナルティは再送しません"
+  ],
+  "仅在 ADV / ATD / ANV 剧情响应": [
+    "Only active in ADV / ATD / ANV story",
+    "ADV / ATD / ANV シナリオでのみ反応"
+  ],
+  "从模板开始，或直接在大画布上绘制 16 点包络": [
+    "Start from a template or draw a 16-point envelope",
+    "テンプレートから開始、または 16 点の包絡を描画"
+  ],
+  "同目录未找到 GameAssembly.dll": [
+    "GameAssembly.dll missing from the same folder",
+    "同じフォルダーに GameAssembly.dll がありません"
+  ],
+  "未发现 IPv4 监听进程；本机服务尚未可用。": [
+    "No IPv4 listener found; local server is not ready.",
+    "IPv4 待受プロセスなし。ローカルサーバーは未準備です。"
+  ],
+  "剧情队列决定波形，音量只调节强度；战斗不响应音频": [
+    "Story queues choose waveforms; audio adjusts intensity, never combat",
+    "シナリオキューで波形を選択、音量で強度を調整。戦闘中は音声に反応しません"
+  ],
+  "当前队列尚未保存。已保存的另一通道队列不会改变。": [
+    "This queue is unsaved. The other channel's saved queue will not change.",
+    "このキューは未保存です。別チャンネルの保存済みキューは変わりません。"
+  ],
+  "打开编辑器可使用模板、平滑、镜像、归一化和撤销。": [
+    "Editor tools include templates, smoothing, mirror, normalize and undo.",
+    "エディターでテンプレート・平滑化・反転・正規化・取消を使用できます。"
+  ],
+  "自动检测 HolyKnightRicca.exe": [
+    "Auto-detect HolyKnightRicca.exe",
+    "HolyKnightRicca.exe を自動検出"
+  ],
+  "配置在迁移期间已被其他进程修改，请重启后重新加载": [
+    "Settings changed in another process during migration; restart to reload",
+    "移行中に別プロセスが設定を変更しました。再起動して再読込してください"
+  ],
+  "固定重复同一波形；循环按队列逐段播放，不依赖音频。": [
+    "Fixed repeats one waveform; Queue plays each segment in order, without audio.",
+    "固定は同じ波形を反復。ループはキューの区間順に再生し、音声には依存しません。"
+  ],
+  "将清除已保存的手动游戏路径，重新按进程名寻找游戏。": [
+    "Clear the manual game path and detect the game by process name again.",
+    "保存済みの手動パスを消去し、プロセス名でゲームを再検索します。"
+  ],
+  "进入剧情后点击记录，或开启自动收集再逐个切换场景。": [
+    "Record after entering a story, or enable collection and visit each scene.",
+    "シナリオに入って記録するか、自動収集を有効にして各シーンを切り替えてください。"
+  ],
+  "选择 Holy Knight Ricca 游戏程序": [
+    "Select the Holy Knight Ricca executable",
+    "Holy Knight Ricca の実行ファイルを選択"
+  ],
+  "音频组件不可用，请运行安装 / 修复运行环境后重试": [
+    "Audio component unavailable; install/repair the runtime and retry",
+    "音声機能を利用できません。実行環境をインストール・修復して再試行してください"
+  ],
+  "默认 B：战斗动作 / 剧情音频队列；音量只调强度": [
+    "Default B: combat actions / story audio queue; audio scales intensity",
+    "既定の B：戦闘アクション／シナリオ音声キュー。音量は強度のみ調整"
+  ],
+  "A/B 低强度测试完成 · 自动输出将按游戏状态恢复": [
+    "A/B low-intensity tests complete · Auto-output resumes by game state",
+    "A/B 低強度テスト完了・ゲーム状態に応じて自動出力を再開"
+  ],
+  "当前通道使用单波形循环；勾选上方开关并保存后使用队列": [
+    "Currently looping one waveform; enable the switch above and save to use a queue",
+    "現在は単一波形をループ。上のスイッチをオンにして保存するとキューを使用"
+  ],
+  "战斗不触发音频 Pulse；暂停、加载或音频失联归零": [
+    "Combat never triggers audio Pulse; pause, loading or lost audio outputs zero",
+    "戦闘では音声 Pulse は作動しません。停止・読込・音声切断でゼロ化"
+  ],
+  "请先进入有效剧情；选择框、主菜单或读取失效时不记录。": [
+    "Enter a valid story first; choices, menus and invalid reads are not recorded.",
+    "有効なシナリオに入ってください。選択画面・メニュー・取得失敗時は記録しません。"
+  ],
+  "输出等待中 · 请完成连接、安全硬上限和游戏状态检查": [
+    "Output waiting · Check connection, hard safety cap and game state",
+    "出力待機・接続、安全ハード上限、ゲーム状態を確認してください"
+  ],
+  "将按进程名查找 HolyKnightRicca.exe": [
+    "Find HolyKnightRicca.exe by process name",
+    "プロセス名で HolyKnightRicca.exe を検索"
+  ],
+  "将重新载入已保存的数值，不会恢复出厂值或改写配置文件。": [
+    "Reload saved values without factory reset or rewriting settings.",
+    "保存済みの数値を再読込します。初期化や設定ファイルの書換えは行いません。"
+  ],
+  "等待可用的捕获遥测；读取异常不会触发捕获 Pulse。": [
+    "Waiting for valid capture data; invalid reads do not trigger capture Pulse.",
+    "有効な拘束情報を待機中。取得異常では拘束 Pulse を作動させません。"
+  ],
+  "仅记录遇到的场景，不自动启用循环；此开关仅本次运行有效。": [
+    "Only record visited scenes; never auto-enable loops. This switch lasts this session.",
+    "訪問シーンを記録するだけでループは有効にしません。この起動中のみ有効です。"
+  ],
+  "游戏已暂停 · A/B 归零，取消游戏暂停后自动恢复通道": [
+    "Game paused · A/B zeroed; channels resume when the game resumes",
+    "ゲーム一時停止・A/B をゼロ化。ゲーム再開時にチャンネルを復帰"
+  ],
+  " 队列已保存并应用；段落从头计时，强度上限与暂停状态不变。": [
+    " queue saved and applied; restarts from the beginning, with cap and pause unchanged.",
+    " キューを保存・適用。先頭から再計時し、強度上限と停止状態は維持します。"
+  ],
+  "所选 EXE 同目录没有 GameAssembly.dll": [
+    "GameAssembly.dll is missing beside the selected EXE",
+    "選択した EXE と同じフォルダーに GameAssembly.dll がありません"
+  ],
+  "独立配置 · 重叠时较强者接管，同强度刷新时长，较弱者忽略": [
+    "Independent setup · Stronger takes over; equal restarts; weaker is ignored",
+    "個別設定・強い方を優先、同じ強度なら時間を更新、弱い方は無視"
+  ],
+  "输出已手动暂停 · A/B 归零，恢复后按当前游戏状态运行": [
+    "Manually paused · A/B zeroed; resume follows current game state",
+    "手動停止中・A/B をゼロ化。再開後は現在のゲーム状態に従います"
+  ],
+  "队列决定波形 · 音量缩放当前段强度（旧纯音频模式仍兼容）": [
+    "Queue selects waveform · Audio scales segment intensity (legacy audio supported)",
+    "キューで波形を選択・音量で区間の強度を調整（旧音声モードにも対応）"
+  ],
+  "队列已选择 · 当前通道或 CG 剧情循环开关关闭，不输出": [
+    "Queue selected · Channel or CG loop disabled; no output",
+    "キュー選択済み・チャンネルか CG ループがオフのため出力なし"
+  ],
+  " 已被占用。请关闭重复窗口，或点“连接不上？”查看占用进程。": [
+    " is occupied. Close duplicate windows or use Can't connect? to inspect the owner.",
+    " は使用中です。重複ウィンドウを閉じるか「接続できない？」で使用プロセスを確認してください。"
+  ],
+  "优先选择“系统回环”以捕获游戏声音；录音输入适合麦克风测试。": [
+    "Use system loopback for game audio; recording inputs are for microphone tests.",
+    "ゲーム音声はシステムループバックを選択。録音入力はマイクのテスト向けです。"
+  ],
+  "未找到设备。Windows 需要可用的扬声器回环或录音输入。": [
+    "No device found. Windows needs an available speaker loopback or recording input.",
+    "デバイスが見つかりません。利用可能なスピーカーループバックか録音入力が必要です。"
+  ],
+  "连接 Ricca 只读遥测并使用 DG-LAB 3.0 扫码": [
+    "Connect read-only Ricca telemetry and scan with DG-LAB 3.0",
+    "Ricca の読み取り専用情報を接続し、DG-LAB 3.0 でスキャン"
+  ],
+  "Ricca × DG-LAB 已在启动或运行中，请勿重复打开。": [
+    "Ricca × DG-LAB is starting or already running. Do not launch twice.",
+    "Ricca × DG-LAB は起動中または実行中です。重複起動しないでください。"
+  ],
+  "当前战斗来源下没有这类事件。筛选仅改变显示，不启用或停用反馈。": [
+    "No matching events for this source. Filters change visibility, not feedback settings.",
+    "この信号源には該当イベントがありません。絞り込みは表示のみ変更します。"
+  ],
+  "挣扎反馈持续至挣脱，保持所选强度与波形；暂停或读取异常时停止。": [
+    "Struggle feedback holds the selected strength/wave until escape; pauses or read errors stop it.",
+    "抵抗中は脱出まで選択した強度・波形を維持。停止・取得異常時は出力を停止します。"
+  ],
+  "输出按音频包络连续变化，并始终受“个性化范围”的安全上限约束。": [
+    "Output follows the audio envelope and always respects the cap in Intensity range.",
+    "出力は音声包絡に連動し、常に強度設定の安全上限に従います。"
+  ],
+  "保存后同时应用于预览和已解锁的实时输出；所有命令受安全上限约束。": [
+    "Saving applies to previews and authorized live output; all commands respect the safety cap.",
+    "保存後、プレビューと許可済み実出力に適用。すべての命令は安全上限に従います。"
+  ],
+  "只读诊断本机服务、网卡和端口占用；不会自动修改防火墙或 VPN。": [
+    "Read-only checks for server, adapters and port usage; never changes firewall or VPN settings.",
+    "サーバー・アダプター・ポートを読み取り専用で診断。ファイアウォールや VPN は変更しません。"
+  ],
+  "尚未读取到有效的 Scene3D / SceneANV 剧情资源": [
+    "No valid Scene3D / SceneANV story asset detected yet",
+    "有効な Scene3D / SceneANV のシナリオ資源が未検出"
+  ],
+  "左侧“实时总览”显示 HP、动作、护甲，以及捕获状态和挣扎进度。": [
+    "Overview shows HP, actions, armor, capture status and struggle progress.",
+    "左側の概要では HP・アクション・防具・拘束状態・抵抗の進捗を確認できます。"
+  ],
+  "普通输出遵循暂停；死亡惩罚优先于普通暂停，紧急归零可停止全部输出": [
+    "Normal output respects pause. Death penalties override normal pause; STOP cancels all output",
+    "通常出力は停止に従います。死亡ペナルティは通常停止より優先し、緊急停止で全出力を解除"
+  ],
+  "不接收 HP、动作或捕获事件；剧情输出与死亡惩罚仍按独立设置执行。": [
+    "No HP, action or capture events; story output and death penalties keep their own settings.",
+    "HP・アクション・拘束イベントは受信せず、シナリオと死亡ペナルティは独立設定に従います。"
+  ],
+  "按所选档位或自定义数值触发，逐渐回落；碎甲升敏后仍受安全上限约束。": [
+    "Uses the selected tier or value and decays; armor sensitivity boost still respects the cap.",
+    "選択した段階または数値で作動して減衰。防具破損による感度上昇後も安全上限に従います。"
+  ],
+  "请保持：低强度 ≤ 中强度 ≤ 高强度 ≤ 死亡惩罚 ≤ 安全上限": [
+    "Keep: Low ≤ Medium ≤ High ≤ Death penalty ≤ Safety cap",
+    "低 ≤ 中 ≤ 高 ≤ 死亡ペナルティ ≤ 安全上限 にしてください"
+  ],
+  " 个。当前场景将在有效采样后自动匹配；强度、波形和暂停状态保持不变。": [
+    " scenes. Valid samples match the current scene; intensity, waveforms and pause stay unchanged.",
+    " シーン。有効な取得後に現在のシーンを照合。強度・波形・停止状態は維持します。"
+  ],
+  "DG-LAB App 已连接 · 按游戏状态自动输出（受硬上限约束）": [
+    "DG-LAB App connected · Output follows game state, capped by the hard limit",
+    "DG-LAB アプリ接続済み・ゲーム状態に応じて自動出力（ハード上限内）"
+  ],
+  "受困期间保持所选强度与波形，不按秒计时；挣脱、暂停或读取失效时停止。": [
+    "Holds strength and waveform while captured, without a timer; stops on escape, pause or invalid reads.",
+    "拘束中は時間制限なしで強度・波形を維持。脱出・停止・読み取り無効で停止します。"
+  ],
+  "选择一套起点后，下面五项仍可分别调节；点击底部“应用并保存”后生效。": [
+    "Choose a starting profile, then adjust all five values separately. Apply & save to activate.",
+    "初期プロファイルを選んだ後も 5 項目を個別調整できます。下の「適用して保存」で反映します。"
+  ],
+  "必须满足 0 ≤ 低 ≤ 中 ≤ 高 ≤ 死亡 ≤ 硬上限 ≤ 100": [
+    "Required: 0 ≤ Low ≤ Medium ≤ High ≤ Death ≤ Hard cap ≤ 100",
+    "0 ≤ 低 ≤ 中 ≤ 高 ≤ 死亡 ≤ ハード上限 ≤ 100 が必要です"
+  ],
+  "按实际扣血量分级，含上限；300 ms 内连续掉血合并计算。支持小数。": [
+    "Based on HP lost, including thresholds. Losses within 300 ms are combined; decimals supported.",
+    "実際の HP 減少量で分類（閾値を含む）。300 ms 以内の連続減少を合算し、小数にも対応。"
+  ],
+  "音频共感设置已保存并应用；连接后按游戏状态自动输出，保留手动暂停状态。": [
+    "Audio sync settings saved; connected output follows game state and retains manual pause.",
+    "音声連動設定を保存・適用。接続後はゲーム状態に連動し、手動停止を維持します。"
+  ],
+  "4. 检查 Windows 防火墙是否允许本程序在专用网络入站 TCP ": [
+    "4. Check Windows Firewall permits this app's inbound TCP on private networks: ",
+    "4. Windows ファイアウォールで、プライベートネットワークの受信 TCP を確認："
+  ],
+  "战斗 / 菜单不响应音频 · 等待 ADV / ATD / ANV 剧情": [
+    "Combat / menus ignore audio · Waiting for ADV / ATD / ANV story",
+    "戦闘・メニューでは音声に反応しません・ADV / ATD / ANV シナリオ待ち"
+  ],
+  "请先设置适合自己的低强度与硬上限。暂停 / 恢复和紧急归零始终位于右上角。": [
+    "Set a suitable low intensity and hard cap first. Pause, Resume and STOP are always at the top right.",
+    "まず適切な低強度とハード上限を設定。停止・再開・緊急停止は常に右上にあります。"
+  ],
+  "音频模块不可用 · 请安装 requirements-native.txt": [
+    "Audio module unavailable · Install requirements-native.txt",
+    "音声モジュール利用不可・requirements-native.txt をインストール"
+  ],
+  "“个性化范围”提供低、中、高方案，低强度、中强度、高强度和死亡惩罚也能分别调整。": [
+    "Intensity range offers Low, Medium and High profiles. Each intensity and the death penalty are editable.",
+    "強度設定には低・中・高のプロファイルがあり、各強度と死亡ペナルティを個別調整できます。"
+  ],
+  "已登记场景从剧情开始循环，包含回想 / 鉴赏；离开、插件暂停或读数失效立即停止。": [
+    "Registered scenes loop from story start, including Gallery; exit, app pause or invalid reads stop it.",
+    "登録シーンは回想・鑑賞を含め開始時からループ。退出・アプリ停止・取得失敗で即停止します。"
+  ],
+  "音频采集、门限与 Pulse 模拟已移至左侧“音频共感”，不再属于事件波形映射。": [
+    "Audio capture, gate and Pulse simulation are now in Audio sync, separate from event waveforms.",
+    "音声取得・ゲート・Pulse シミュレーションは左の音声連動に移動し、イベント波形とは別になりました。"
+  ],
+  "旧模式保留：仅在剧情响应，波形随音频包络生成。新设计请选择“动作＋剧情音频队列”。": [
+    "Legacy mode: story-only audio envelopes. New profiles should use independent Story / Gallery audio modes.",
+    "旧モードはシナリオ専用の音声包絡です。新規設定は独立したシナリオ／鑑賞の音声モードを使用してください。"
+  ],
+  "仅设置战斗来源；剧情 / 鉴赏请切换顶部分类。HP 与动作重叠只取较强者，不叠加强度。": [
+    "Combat source only; select the Story / Gallery tab for scenes. Overlapping HP/actions use the stronger, never add.",
+    "戦闘の信号源のみ設定。シナリオ／鑑賞は上部で切替。HP とアクションは強い方だけを優先し加算しません。"
+  ],
+  "各方案包含强度与上限，请核对后再“应用并保存”。实际输出始终受已保存的安全硬上限约束。": [
+    "Profiles include intensity and cap values. Verify before Apply & save. Live output always respects the saved hard cap.",
+    "各プロファイルは強度と上限を含みます。確認後に適用して保存してください。実出力は常に保存済みハード上限内です。"
+  ],
+  "注意：该通道整体关闭，剧情配置可以保存，但不会输出。请在战斗反馈页恢复通道来源后使用。": [
+    "Channel is disabled: story settings can be saved but will not output. Re-enable the channel in Combat feedback.",
+    "チャンネル全体が無効です。シナリオ設定は保存できますが出力しません。戦闘設定で再有効化してください。"
+  ],
+  "在“波形工作台”打开 A / B 通道策略，分别选择 HP、动作、两者结合、剧情音频或关闭。": [
+    "Open A/B strategies in Waveform studio. Set combat sources and Story / Gallery playback independently.",
+    "波形スタジオで A/B の設定を開き、戦闘の信号源とシナリオ／鑑賞の再生方式を個別に設定します。"
+  ],
+  "只配置进入剧情、Scene 或鉴赏后的输出；与战斗反馈独立配置，底部统一保存。死亡惩罚仍优先。": [
+    "Configure output for stories, scenes and Gallery independently of combat. Save both categories below. Death penalties still take priority.",
+    "シナリオ・シーン・鑑賞の出力を戦闘とは別に設定します。下部で両方を保存。死亡ペナルティは引き続き優先します。"
+  ],
+  "1. 端口被其他 Ricca 窗口占用：先退出旧窗口，再点“重试 Socket”；不要重复启动。": [
+    "1. If another Ricca window owns the port, close it before Retry Socket. Do not launch duplicate instances.",
+    "1. 別の Ricca ウィンドウがポートを使用中なら、先に閉じて Socket を再試行してください。多重起動しないでください。"
+  ],
+  "5. 检查 VPN 的局域网访问/分流设置、Wi-Fi 访客隔离；本机监听正常不代表手机一定可达。": [
+    "5. Check VPN LAN access/split tunneling and Wi-Fi guest isolation. A local listener does not guarantee phone access.",
+    "5. VPN の LAN 許可・分割トンネルと Wi-Fi のゲスト隔離を確認。PC の待受が正常でもスマホから接続できるとは限りません。"
+  ],
+  "记录与输出分开：自动收集不会启用 Pulse。启用循环后，剧情和回想都会按现有 A/B 策略响应。": [
+    "Recording and output are separate. Collection never enables Pulse. Once a loop is enabled, stories and Gallery follow the saved A/B strategies.",
+    "記録と出力は別です。自動収集で Pulse は有効になりません。ループ有効後、シナリオと回想は保存済み A/B 設定に従います。"
+  ],
+  "已登记剧情 / 回想全程循环 · 大按钮暂停循环 · 死亡惩罚优先于普通暂停 · 紧急归零停止全部输出": [
+    "Registered stories / Gallery loop throughout · Large button pauses loops · Death overrides normal pause · STOP cancels all output",
+    "登録済みシナリオ・回想で継続ループ・大ボタンでループ停止・死亡ペナルティは通常停止より優先・緊急停止で全出力を解除"
+  ],
+  "2. 选择手机同一局域网的 Wi-Fi / 以太网 IPv4；VPN / 虚拟网卡地址可能无法从手机访问。": [
+    "2. Choose the Wi-Fi/Ethernet IPv4 on the phone's LAN. VPN/virtual adapter addresses may be unreachable from the phone.",
+    "2. スマホと同じ LAN の Wi-Fi／Ethernet IPv4 を選択。VPN・仮想アダプターのアドレスには接続できない場合があります。"
+  ],
+  "A / B 面板可核对波形与强度。死亡惩罚优先于普通暂停，右上角会明确显示；请用“紧急归零”停止全部输出。": [
+    "Check waveform and intensity in the A/B panels. Death penalties override normal pause and are marked at the top right. Use STOP to cancel all output.",
+    "A/B パネルで波形と強度を確認。死亡ペナルティは通常停止より優先し、右上に表示されます。全出力の解除は緊急停止を使用してください。"
+  ],
+  "将已收集的 34 个场景加入当前进程白名单并保存。当前场景在有效采样后即可循环，不改变强度、波形或暂停状态。": [
+    "Add the 34 collected scenes to the active allowlist and save. Valid samples can then start the current scene loop without changing intensity, waveform or pause state.",
+    "収集済みの 34 シーンを現在の許可リストに保存。有効な取得後に現在のシーンをループできます。強度・波形・停止状態は変更しません。"
+  ],
+  "每类事件可设置强度、波形和开关，并预览波形。挣扎中持续至挣脱，不按秒计时。剧情音频还需在“音频共感”单独开启。": [
+    "Each event has intensity, waveform, toggle and preview controls. Capture holds until escape, not a timer. Story audio also needs the Audio sync master switch.",
+    "イベントごとに強度・波形・オンオフ・プレビューを設定。拘束は秒数ではなく脱出まで継続します。シナリオ音声は音声連動のマスタースイッチも必要です。"
+  ],
+  "在“设备与游戏”选择手机可访问的局域网 IPv4，用 DG-LAB 3.0 App 的 Socket 模式扫码。": [
+    "In Device & game, select a LAN IPv4 reachable by your phone and scan using Socket mode in the DG-LAB 3.0 App.",
+    "デバイスとゲームでスマホから接続できる LAN IPv4 を選択し、DG-LAB 3.0 アプリの Socket モードでスキャンします。"
+  ],
+  "无需安装 BepInEx，不向游戏注入 DLL；控制中心只通过 ReadProcessMemory 读取已验证字段。": [
+    "No BepInEx installation or DLL injection. The Control Center uses ReadProcessMemory to read verified fields only.",
+    "BepInEx のインストールや DLL 注入は不要です。検証済みの項目を ReadProcessMemory で読み取るだけです。"
+  ],
+  "3. 切换地址后重新扫码，手机选择 DG-LAB 3.0 的 Socket 模式。127.0.0.1 只能在本机使用。": [
+    "3. Rescan after changing the address; select DG-LAB 3.0 Socket mode on your phone. 127.0.0.1 works only on this PC.",
+    "3. アドレス変更後は再スキャンし、スマホで DG-LAB 3.0 の Socket モードを選択。127.0.0.1 は PC 内でのみ使用できます。"
+  ],
+  "仅 HP 从正数归零触发一次，持续 0.1–10 秒；进入 CG 不重复触发，优先于普通暂停，仍受硬上限与紧急归零约束。": [
+    "Triggers once when positive HP reaches zero, for 0.1–10 s. CG entry never retriggers it. Overrides normal pause; hard cap and STOP still apply.",
+    "HP が正数からゼロになった時に 1 回、0.1～10 秒作動。CG 進入で再発動しません。通常停止より優先しますが、ハード上限と緊急停止は有効です。"
+  ],
+  "请输入安全硬上限（0–100 的整数）。保存应用后，已连接的设备将按有效游戏状态自动输出；手动暂停或紧急归零不会自动解除。": [
+    "Enter an integer hard safety cap (0–100). After saving, connected devices output automatically from valid game state. Manual pause and emergency stop are never cleared automatically.",
+    "安全ハード上限を 0～100 の整数で入力。保存後、接続済みデバイスは有効なゲーム状態に応じて自動出力します。手動停止や緊急停止は自動解除しません。"
+  ],
+  "重试会先归零并暂停输出。关闭占用端口的旧窗口后再重试；连接成功后，点击右上角“恢复输出”解除这次暂停。无需 A/B 测试。": [
+    "Retry first zeroes and pauses output. Close the old window using the port, then retry. Once connected, use Resume at the top right. No A/B tests are required.",
+    "再試行前に出力をゼロにして停止します。ポートを使用する旧ウィンドウを閉じて再試行。接続後、右上の出力再開で解除してください。A/B テストは不要です。"
+  ],
+  "0 表示禁用所有设备输出。硬上限仅限制数值，不保证体感安全，请从低值开始。超过上限的档位会下调；以后可在“个性化范围”修改。": [
+    "0 disables all device output. A hard cap limits numbers, not physical safety: start low. Higher tiers are lowered to the cap. Change it later in Intensity range.",
+    "0 で全デバイス出力を無効化。ハード上限は数値制限であり体感の安全を保証しません。低い値から始めてください。超過する段階は下げられ、後で強度設定から変更できます。"
+  ],
+  "在音频共感页启用监听；在下方 CG 剧情循环选择自定义队列。波形按队列播放，音量只缩放当前段强度；静音归零，战斗不响应音频。": [
+    "Enable listening in Audio sync and choose a custom CG queue below. Waveforms follow the queue; audio scales segment intensity. Silence outputs zero; combat ignores audio.",
+    "音声連動で取得をオンにし、下の CG ループでカスタムキューを選択。波形はキューに従い、音量で区間強度を調整。無音はゼロ、戦闘は音声に反応しません。"
+  ],
+  "保存安全硬上限后，连接成功即按有效游戏状态自动输出，无需测试 A/B 或单独启用。右上角可暂停或紧急归零；连接不上可查看诊断。": [
+    "After saving the hard cap, connection enables automatic output for valid game state; no A/B tests or separate arming. Pause or STOP at the top right; use diagnostics for connection issues.",
+    "安全ハード上限を保存すると、接続後は有効なゲーム状態で自動出力。A/B テストや個別の有効化は不要。右上で停止・緊急停止、接続トラブルは診断で確認できます。"
+  ],
+  "循环＋音频：波形按段循环，当前段强度 × 音频系数；静音归零但队列继续计时。只在有效剧情 / Scene 响应；须在音频共感页启用监听。": [
+    "Queue + audio: waveform segments loop; intensity = segment base × audio factor. Silence outputs zero while time advances. Valid stories/scenes only; enable listening in Audio sync.",
+    "ループ＋音声：区間をループし、強度は区間の基準値×音声係数。無音ではゼロですがキューの時間は進みます。有効なシナリオのみ反応し、音声取得をオンにする必要があります。"
+  ],
+  "scenes.json 可备份 / 分享；只保存 ID、脚本路径、cut 和备注，不采集对白、音频或设备配对信息。自动收集每次启动默认关闭。": [
+    "Back up or share scenes.json. It stores IDs, script paths, cuts and notes only, not dialogue, audio or device pairing data. Auto-collection starts off each launch.",
+    "scenes.json はバックアップ・共有可能。ID・スクリプトパス・cut・メモのみ保存し、会話・音声・ペアリング情報は収集しません。自動収集は起動ごとにオフです。"
+  ],
+  "请确认当前是败北后的互动，而不是回想。确认后将按通道设置开始循环 Pulse，不补发之前未记录的死亡惩罚。请先核对强度；紧急归零可停止全部输出。": [
+    "Confirm this is a post-defeat interaction, not Gallery. It will loop using channel settings, without replaying unrecorded death penalties. Check intensity first; STOP cancels all output.",
+    "回想ではなく敗北後のインタラクションであることを確認してください。チャンネル設定でループし、未記録の死亡ペナルティは再送しません。強度を確認し、全解除には緊急停止を使用してください。"
+  ],
+  "逐段播放，到末尾回到第 1 段；每段 0.5–30 秒，最多 16 段。暂停冻结进度，离开场景停止；死亡惩罚优先。通道 / CG 循环关闭时不输出，强度仍受破甲倍率与硬上限约束。": [
+    "Plays segments in order, then repeats from step 1. Each is 0.5–30 s, up to 16. Pause freezes progress; exit stops it; death has priority. Disabled channel/CG loops stay silent; armor boost and hard cap still apply.",
+    "区間を順に再生し、末尾から先頭へ戻ります。各 0.5～30 秒、最大 16 区間。停止で進捗を保持し、退出で停止。死亡が優先し、チャンネル・CG ループがオフなら出力なし。防具倍率とハード上限にも従います。"
+  ],
+  "默认 A＝HP＋动作，B＝战斗动作／剧情音频队列。将恢复通道策略及事件映射并保存，不修改强度、安全硬上限、音频监听开关或已保存队列，也不删除自定义波形。恢复后自动应用，保留手动暂停状态。": [
+    "Defaults: A = HP + actions; B = combat actions / story audio queue. Resets and saves strategies/event mappings only. Intensities, hard cap, listening, saved queues and custom waveforms stay intact. Applies automatically, retaining manual pause.",
+    "既定：A＝HP＋アクション、B＝戦闘アクション／シナリオ音声キュー。チャンネル設定とイベント割当のみ復元・保存。強度・安全上限・音声取得・保存済みキュー・カスタム波形は変更せず、手動停止を維持して適用します。"
+  ],
+  "二维码暂不可用\n请点“连接不上？”": [
+    "QR code unavailable\nUse Can't connect?",
+    "QR コードを表示できません\n「接続できない？」を確認"
+  ],
+  "二维码不可用\nSocket 服务启动失败\n请点“连接不上？”": [
+    "QR code unavailable\nSocket server failed to start\nUse Can't connect?",
+    "QR コードを表示できません\nSocket サーバーの起動失敗\n「接続できない？」を確認"
+  ],
+  "\n进入剧情或回想后将自动循环 Pulse，沿用现有通道强度、波形与硬上限。记录本身不代表已实机验证，请先核对设置。": [
+    "\nStory / Gallery will loop Pulse using existing channel intensities, waveforms and hard cap. Recording alone is not device validation; verify settings first.",
+    "\nシナリオ・回想に入ると現在の強度・波形・ハード上限で Pulse をループします。記録は実機確認を意味しません。先に設定を確認してください。"
+  ]
+}

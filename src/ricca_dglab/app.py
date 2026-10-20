@@ -15,6 +15,8 @@ from PySide6.QtQuick import QQuickItem  # Registers QQuickItem* conversion for s
 
 
 def _workspace_root() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parents[2]
 
 
@@ -42,6 +44,13 @@ def main() -> int:
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
 
+    from . import audit
+    from .product_config import app_data_dir
+    if not args.demo:
+        audit.configure(app_data_dir() / "logs" / "runtime.jsonl")
+        audit.record("session.start", source_root=str(root), source_file=str(Path(__file__).resolve()),
+                     socket_enabled=not args.no_socket)
+
     from .backend import AppBackend, DemoReader
     from .hud import HudController
     if args.demo:
@@ -58,17 +67,16 @@ def main() -> int:
         )
 
     app = QGuiApplication(sys.argv[:1])
-    app.aboutToQuit.connect(instance.close)
     app.setApplicationName("Ricca × DG-LAB Control Center")
     app.setOrganizationName("Ricca x DG-LAB")
     app.setFont(QFont("Microsoft YaHei UI", 10))
-    icon_path = (
-        root / "src" / "ricca_dglab" / "assets" / "branding"
-        / "ricca-app-icon-round.png"
-    )
+    icon_path = Path(__file__).resolve().parent / "assets/branding/ricca-app-icon-round.png"
     app.setWindowIcon(QIcon(str(icon_path)))
     engine = QQmlApplicationEngine()
     backend = AppBackend(reader, demo=args.demo, start_bridge=not args.no_socket)
+    if not args.demo and not args.no_socket:
+        from .hotkey import EmergencyHotkey
+        backend.attachHotkey(EmergencyHotkey(backend._bridge.latch_global_emergency_stop, backend))
     engine.rootContext().setContextProperty("backend", backend)
     qml_path = Path(__file__).resolve().parent / "qml" / "ControlCenter.qml"
     engine.load(QUrl.fromLocalFile(str(qml_path)))
@@ -90,6 +98,8 @@ def main() -> int:
     if args.strategy:
         engine.rootObjects()[0].setProperty("strategyOnStart", args.strategy)
     app.aboutToQuit.connect(backend.shutdown)
+    app.aboutToQuit.connect(audit.close)
+    app.aboutToQuit.connect(instance.close)
     if not args.demo and not backend.onboardingCompleted:
         main_window.setProperty("showOnboardingOnStart", True)
     if args.screenshot:

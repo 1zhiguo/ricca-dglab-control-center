@@ -30,25 +30,25 @@ Window {
         required property var history
         color: "#7a0d131f"
         Rectangle { anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom; width: Math.max(1, 2 * hudWindow.uiScale); color: channel.accent }
-        Text {
+        LocalizedText {
             x: parent.width * 0.025 + 4 * hudWindow.uiScale
             y: 0; height: parent.height * 0.32
-            text: channel.letter
+            sourceText: channel.letter
             color: channel.accent; font.family: "Segoe UI"; font.bold: true; font.pixelSize: 15 * hudWindow.uiScale
             verticalAlignment: Text.AlignVCenter
         }
-        Text {
+        LocalizedText {
             x: parent.width * 0.12; width: parent.width * 0.66
             y: 0; height: parent.height * 0.32
-            text: (backend.channelPolicies ? backend.channelModeName(channel.letter) : "") + " · " + (hudWindow.live ? "LIVE" : "预览")
+            sourceText: (backend.channelPolicies ? backend.channelModeName(channel.letter) : "") + " · " + (hudWindow.live ? "LIVE" : "预览")
             color: hudWindow.live ? "#b9e5d4" : "#b5bdcb"
-            font.family: "Microsoft YaHei UI"; font.pixelSize: 10 * hudWindow.uiScale
+            font.family: backend.uiFontFamily; font.pixelSize: 10 * hudWindow.uiScale
             verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight
         }
-        Text {
+        LocalizedText {
             x: parent.width * 0.82; width: parent.width * 0.145
             y: 0; height: parent.height * 0.32
-            text: Math.round(channel.strength)
+            sourceText: Math.round(channel.strength)
             color: "white"; font.family: "Segoe UI"; font.bold: true; font.pixelSize: 13 * hudWindow.uiScale
             horizontalAlignment: Text.AlignRight; verticalAlignment: Text.AlignVCenter
         }
