@@ -84,6 +84,10 @@ assert 'class="github-link"' in home and 'class="support-grid"' in home
 for support_asset in ('x-avatar.png','qq-group.jpg','reward-code.jpg'):
     assert (DIST/'assets'/support_asset).stat().st_size > 1000
 assert home.count("data-screenshot") == 6
+original = home[home.index('<section id="original-work"'):home.index('<section id="support"')]
+assert 'もぐらソフト' in original and '原作信息与版权归属' in original
+assert 'The game itself is not included in this plugin or its downloads.' in original
+assert '<a ' not in original, 'Original-work attribution must not contain purchase links'
 assert 'aria-controls="download-sources"' in home and 'id="download-sources" hidden' in home
 assert 'aria-controls="quick-start"' in home and 'id="quick-start"' in home
 assert 'aria-labelledby="quick-start-title"' in home and 'class="quick-steps"' in home

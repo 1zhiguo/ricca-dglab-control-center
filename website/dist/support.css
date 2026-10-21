@@ -16,5 +16,8 @@
 .support-grid article{padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
 .support-grid img{display:block;width:100%;aspect-ratio:1;object-fit:contain;border-radius:8px;background:#0b0d12}
 .support-grid h3{margin:18px 0 6px;font-size:17px}.support-grid p{margin:0;color:var(--muted);font-size:13px;line-height:1.7}
+.original-info{padding:28px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
+.original-info dl{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1fr);gap:24px;margin:0 0 22px}.original-info dt{font-size:13px;color:var(--muted);margin-bottom:8px}.original-info dd{margin:0;font-size:19px;font-weight:700;line-height:1.6;overflow-wrap:anywhere}.original-info p{color:var(--muted);font-size:14px;line-height:1.85;margin:12px 0 0}.original-info .original-not-included{color:var(--text,#f3f5fa);font-weight:700}
+@media(max-width:720px){.original-info{padding:20px}.original-info dl{grid-template-columns:1fr;gap:18px}.original-info dd{font-size:17px}}
 @media(max-width:760px){.github-link span{display:none}.header nav>a.github-link{width:34px;padding:0;margin-right:8px}.header nav{flex-wrap:nowrap!important}}
 @media(max-width:720px){.social-profile-card{grid-template-columns:76px minmax(0,1fr);gap:16px;padding:18px}.social-avatar{width:76px;height:76px}.social-profile-copy h3{font-size:18px}.social-follow-button{grid-column:1/-1;width:100%;margin-top:2px}.support-grid{grid-template-columns:1fr}}

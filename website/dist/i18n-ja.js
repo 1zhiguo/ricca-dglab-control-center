@@ -155,5 +155,11 @@ window.RICCA_JA = Object.freeze({
   "First-test checklist →": "初回テストのチェック項目 →",
   "Independent community project. Not affiliated with DG-LAB or the game creator. Ricca and Manaka are separate products.": "非公式のコミュニティプロジェクトです。DG-LAB やゲーム作者とは関係ありません。Ricca と Manaka は別製品です。",
   "Manaka project ↗": "Manaka プロジェクト ↗",
+  "Original game & rights": "原作情報と権利表記",
+  "Original game": "作品名",
+  "The Fairy Tale of Holy Knight Ricca: Two Winged Sisters": "聖騎士リッカの物語 白翼と淫翼の姉妹",
+  "Developer / circle": "開発者／サークル",
+  "The original game, characters, artwork and related rights belong to their respective rights holders. Ricca × DG-LAB is an independent, unofficial companion and is not affiliated with or endorsed by the game developer.": "原作ゲーム、キャラクター、イラストおよび関連する権利は、それぞれの権利者に帰属します。Ricca × DG-LAB は独立した非公式の連携ツールであり、ゲーム開発者との提携・推奨関係はありません。",
+  "The game itself is not included in this plugin or its downloads.": "本プラグインおよび配布ファイルにゲーム本体は含まれません。",
   "Close ×": "閉じる ×"
 });
