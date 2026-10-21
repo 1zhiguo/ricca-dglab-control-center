@@ -46,6 +46,9 @@ for name, page in pages.items():
     nav = header[header.index("<nav"):header.index("</nav>")]
     assert 'class="github-link"' not in nav and 'class="language"' not in nav
     assert 'https://dglab-x-game.web.app/' in header
+    assert 'data-measurement-id="G-3JZLXPP17E"' in markup
+    assert 'data-analytics-host="ricca-dglab.web.app"' in markup
+    assert 'analytics.css?v=1' in markup and 'analytics.js?v=1' in markup
     assert page.h1 == 1, (name, "expected one h1")
     assert page.languages == {"zh", "en", "ja"}, (name, "language selector")
     for reference in page.refs:
