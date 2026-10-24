@@ -10,7 +10,7 @@ window.RICCA_JA = Object.freeze({
   "Official vibration patterns and separate intensity and story queues": "公式振動波形と独立した強度・シナリオキュー",
   "Manual control": "手動操作",
   "Separate A/B levels and waves, without game detection; caps and stop checks retained": "ゲーム検出なしで A/B を手動操作。上限と緊急停止の保護を維持",
-  "1.1.0 is available on GitHub. Baidu and COS mirrors will open after the new files are uploaded.": "1.1.0 は GitHub からダウンロードできます。百度・COS は新ファイルのアップロード後に公開します。",
+  "1.1.0 is available via Baidu Netdisk, COS direct download and GitHub.": "1.1.0 は百度網盤・COS の直接ダウンロード・GitHub から入手できます。",
   "Connection · V3/V4 pairing and two independent devices": "接続・V3/V4 ペアリングと 2 台の独立デバイス",
   "Opossum · dedicated vibration patterns, levels and queues": "オポッサム・専用の振動波形、強度、キュー",
   "Manual control · side-by-side devices, A/B levels and wave tiles": "手動操作・2 台を並べて A/B 強度と波形を選択",

@@ -101,6 +101,8 @@ release = (DIST / "release-config.js").read_text(encoding="utf-8")
 assert 'version: "1.1.0"' in release and "releases/download/v1.1.0/" in release
 info = json.loads((ROOT.parent / "RELEASE_1.1.0.json").read_text(encoding="utf-8"))
 assert info["sha256"] in release and info["filename"] in release
-assert 'baidu: ""' in release and 'direct: ""' in release, "Do not label old mirrors as 1.1.0"
+assert 'https://pan.baidu.com/s/1YYLuzq_Dgc1dZl9kfIj2zg?pwd=12g2' in release
+assert 'baiduCode: "12g2"' in release
+assert 'ricca_releases/v1.1.0/Ricca-x-DGlab-1.1.0-windows-x64.zip' in release
 assert "v1.0.1" not in release and 'data-copy="#baidu-code"' in home
 print(f"Website checks passed: links, images, package isolation, 3 languages, {len(required)} Japanese translations and 1.1.0 downloads.")
