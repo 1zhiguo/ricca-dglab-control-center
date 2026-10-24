@@ -22,7 +22,7 @@ def number(value, fallback):
         return fallback
 
 
-def sanitize_steps(raw):
+def sanitize_steps(raw, *, max_strength=100):
     if not isinstance(raw, list):
         return []
     result = []
@@ -37,7 +37,7 @@ def sanitize_steps(raw):
         result.append({"wave": wave,
                        "duration": round(max(0.5, min(30.0, number(step.get("duration"), 5))), 2),
                        "tier": tier if isinstance(tier, str) and tier in {"low", "medium", "high", "death"} else "low",
-                       "custom_strength": None if custom is None else round(max(0, min(100, number(custom, 0))))})
+                       "custom_strength": None if custom is None else round(max(0, min(max_strength, number(custom, 0))))})
     return result
 
 

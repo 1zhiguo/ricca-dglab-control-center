@@ -33,8 +33,10 @@ class RiccaMappingEngine:
         strengths: dict[str, int] | None = None,
         event_rules: dict[str, dict[str, Any]] | None = None,
         channel_policies: dict | None = None,
+        max_strength: int = 100,
     ) -> None:
-        self.hard_cap = max(0, min(100, int(hard_cap)))
+        self.max_strength = max_strength
+        self.hard_cap = max(0, min(self.max_strength, int(hard_cap)))
         self.strengths = {"low": 5, "medium": 15, "high": 25, "death": 25}
         if strengths:
             self.strengths.update({key: int(value) for key, value in strengths.items()
@@ -66,7 +68,7 @@ class RiccaMappingEngine:
         event_rules: dict[str, dict[str, Any]],
         channel_policies: dict | None = None,
     ) -> None:
-        self.hard_cap = max(0, min(100, int(hard_cap)))
+        self.hard_cap = max(0, min(self.max_strength, int(hard_cap)))
         for key in self.strengths:
             if key in strengths:
                 self.strengths[key] = max(0, min(self.hard_cap, int(strengths[key])))

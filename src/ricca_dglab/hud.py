@@ -13,6 +13,7 @@ from typing import Callable
 from PySide6.QtCore import QObject, Property, QRect, QTimer, Signal
 from PySide6.QtGui import QGuiApplication
 from .safety import is_story_scene
+from .hud_settings import sanitize_hud_settings
 
 
 @dataclass(frozen=True)
@@ -53,17 +54,34 @@ def screen_for_viewport(viewport: GameViewport, screens):
 
 def hud_geometry(viewport: GameViewport, *, dpr: float = 1.0,
                  screen_x: int = 0, screen_y: int = 0,
-                 top_aligned: bool = False) -> QRect:
-    """Manaka anchors/scaling; ADV uses the same 24-unit margin at the top."""
-    scale = math.sqrt(viewport.width * viewport.height / (1920.0 * 1080.0))
+                 top_aligned: bool = False, settings: dict | None = None) -> QRect:
+    """Client-relative placement, clamped inside the game across mixed DPI."""
+    options = sanitize_hud_settings(settings)
+    base_scale = math.sqrt(viewport.width * viewport.height / (1920.0 * 1080.0))
+    scale = base_scale * options["scale"] / 100
+    cells = (int(options["show_pulse"]) + int(options["show_ovc"])) * (int(options["show_a"]) + int(options["show_b"]))
+    margin = min(24 * base_scale, viewport.width / 4, viewport.height / 4)
+    width = min(viewport.width - 2 * margin, viewport.width * .38 * options["scale"] / 100 * cells / 4)
+    height = min(viewport.height - 2 * margin, 68 * scale)
     left = viewport.x + viewport.width * 0.21
-    top = (viewport.y + 24 * scale if top_aligned
-           else viewport.y + viewport.height - (24 + 68) * scale)
+    top = viewport.y + margin if top_aligned else viewport.y + viewport.height - margin - height
+    anchor = options["anchor"]
+    if anchor == "custom":
+        left = viewport.x + (viewport.width - width) * options["x"] / 100
+        top = viewport.y + (viewport.height - height) * options["y"] / 100
+    elif anchor != "auto":
+        vertical, horizontal = anchor.split("_")
+        left = (viewport.x + margin if horizontal == "left" else
+                viewport.x + viewport.width - width - margin if horizontal == "right" else
+                viewport.x + (viewport.width - width) / 2)
+        top = viewport.y + margin if vertical == "top" else viewport.y + viewport.height - margin - height
+    left = max(viewport.x, min(viewport.x + viewport.width - width, left))
+    top = max(viewport.y, min(viewport.y + viewport.height - height, top))
     return QRect(
         round(screen_x + (left - viewport.monitor_x) / dpr),
         round(screen_y + (top - viewport.monitor_y) / dpr),
-        max(1, round(viewport.width * 0.38 / dpr)),
-        max(1, round(68 * scale / dpr)),
+        max(1, round(width / dpr)),
+        max(1, round(height / dpr)),
     )
 
 
@@ -180,7 +198,11 @@ class HudController(QObject):
             self.changed.emit()
 
     def _sample(self, channel: str, now: float) -> float:
-        strength = self.backend.previewA if channel == "A" else self.backend.previewB
+        readings = getattr(self.backend, "hudReadings", None)
+        if readings is not None and not readings["pulse" + channel]["live"]:
+            return 0.0
+        strength = readings["pulse" + channel]["strength"] if readings is not None else (
+            self.backend.previewA if channel == "A" else self.backend.previewB)
         wave = self.backend.waveA if channel == "A" else self.backend.waveB
         points = self.backend.waveAPoints if channel == "A" else self.backend.waveBPoints
         token = wave + self.backend._mapping.pulse_token(channel)
@@ -210,7 +232,8 @@ class HudController(QObject):
             return
         bounds = hud_geometry(viewport, dpr=screen.devicePixelRatio(),
                               screen_x=screen.geometry().x(), screen_y=screen.geometry().y(),
-                              top_aligned=is_story_scene(self.backend._state))
+                              top_aligned=is_story_scene(self.backend._state),
+                              settings=getattr(self.backend, "hudSettings", None))
         if self.window.screen() != screen:
             self.window.setScreen(screen)
         if self.window.geometry() != bounds:

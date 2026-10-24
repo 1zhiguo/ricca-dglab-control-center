@@ -9,6 +9,7 @@ import subprocess
 import sys
 import time
 import zipfile
+from prepare_public_source import public_bytes
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"src"))
@@ -50,8 +51,9 @@ def build():
     for filename in ("VCRUNTIME140.dll","VCRUNTIME140_1.dll","MSVCP140.dll","MSVCP140_1.dll","MSVCP140_2.dll"):
         source=app/"_internal/PySide6"/filename
         if source.exists(): shutil.copy2(source,app/"_internal"/filename)
-    for filename in ("LICENSE","README.md","SECURITY.md","THIRD_PARTY_NOTICES.md","DIAGNOSTICS.md"):
+    for filename in ("LICENSE","README.md","README.zh-CN.md","SECURITY.md","THIRD_PARTY_NOTICES.md","DIAGNOSTICS.md"):
         shutil.copy2(ROOT/filename,app/filename)
+    shutil.copytree(ROOT/"docs",app/"docs",ignore=shutil.ignore_patterns("MANAKA_V4_OVC_MIGRATION.zh-CN.md"))
     packages=("PySide6","PySide6_Essentials","PySide6_Addons","shiboken6","numpy","SoundCard",
               "websockets","qrcode","Pillow","cffi","pycparser","colorama","PyInstaller")
     versions={}
@@ -77,7 +79,9 @@ def build():
                          and p.suffix in {".py",".qml",".json",".png",".ico",".jpg",".txt"}]
     source_hashes={p.relative_to(ROOT).as_posix():digest(p) for p in source_files}
     with zipfile.ZipFile(app/("SOURCE-"+__version__+".zip"),"w",zipfile.ZIP_DEFLATED) as bundle:
-        for path in source_files: bundle.write(path,path.relative_to(ROOT).as_posix())
+        for path in source_files:
+            relative=path.relative_to(ROOT).as_posix()
+            bundle.writestr(relative,public_bytes(path,relative))
     (app/"BUILD_INFO.json").write_text(json.dumps({"version":__version__,"platform":"windows-x64",
         "source_sha256":source_hashes,"dependencies":versions,"game_included":False},indent=2),encoding="utf-8")
     (app/"START_HERE.txt").write_text(
@@ -94,7 +98,8 @@ def build():
     # Run the packaged app with isolated user data and no socket/microphone.
     qa=work/"qa"; qa.mkdir()
     env={**os.environ,"LOCALAPPDATA":str(qa),"PYTHONPATH":"","PYTHONHOME":""}
-    for page in (0,2,5,6):
+    smoke_pages=(0,1,3,5,6,8,9)
+    for page in smoke_pages:
         shot=qa/("packaged-page-"+str(page)+".png")
         completed=subprocess.run([str(app/"Ricca-x-DGlab.exe"),"--demo","--no-socket","--page",str(page),"--screenshot",str(shot)],env=env,timeout=40)
         if completed.returncode or not shot.exists(): raise RuntimeError("Packaged smoke test failed: "+str(page))
@@ -102,7 +107,7 @@ def build():
         for path in sorted(app.rglob("*")):
             if path.is_file(): bundle.write(path,name+"/"+path.relative_to(app).as_posix())
     info={"version":__version__,"filename":archive.name,"sha256":digest(archive),"bytes":archive.stat().st_size,
-          "source_manifest_sha256":digest(app/"BUILD_INFO.json"),"packaged_smoke_pages":[0,2,5,6]}
+          "source_manifest_sha256":digest(app/"BUILD_INFO.json"),"packaged_smoke_pages":list(smoke_pages),"signed":False}
     (release/(archive.name+".sha256")).write_text(info["sha256"]+"  "+archive.name+"\n",encoding="ascii")
     (release/("release-"+__version__+".json")).write_text(json.dumps(info,indent=2),encoding="utf-8")
     (work/"package-path.txt").write_text(str(app),encoding="utf-8")

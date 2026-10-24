@@ -12,6 +12,8 @@ import re
 from typing import Any
 from .scene_catalog import COLLECTED_SCENE_IDS
 from .story_queue import default_story_queues, sanitize_story_queues
+from .ovc import default_ovc_profile, sanitize_ovc_profile
+from .hud_settings import HUD_DEFAULTS, sanitize_hud_settings
 
 
 DEFAULT_EVENT_RULES: dict[str, dict[str, Any]] = {
@@ -38,6 +40,17 @@ EVENT_DURATIONS = {
 }
 CHANNEL_MODES = {"hp", "action", "both", "none", "audio", "off", "action_audio"}
 STORY_MODES = {"fixed", "queue", "audio", "fixed_audio", "queue_audio", "off"}
+
+
+def story_queue_switch(policy: dict, enabled: bool) -> dict:
+    """The queue switch is a story-output switch, never a fixed-wave fallback."""
+    result = deepcopy(policy)
+    mode = story_mode(policy)
+    result["story_mode"] = ("queue_audio" if mode in {"audio", "fixed_audio", "queue_audio"} else "queue") if enabled else mode
+    result["rules"]["defeat_interaction"]["enabled"] = bool(enabled)
+    if enabled:
+        result["rules"]["defeat_interaction"]["playback"] = "queue"
+    return result
 
 
 def story_mode(policy: dict) -> str:
@@ -143,6 +156,8 @@ def sanitize_channel_policies(raw: object, legacy_rules: dict | None = None) -> 
 DEFAULT_SETTINGS: dict[str, Any] = {
     "language": "zh",
     "format": "RiccaDGLabSettings/2",
+    "socket_protocol": "v3",
+    "ovc_profile": default_ovc_profile(),
     "strength_low": 5,
     "strength_medium": 15,
     "strength_high": 25,
@@ -150,6 +165,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "hard_cap": 30,
     "onboarding_completed": False,
     "game_hud_enabled": True,
+    "hud_settings": deepcopy(HUD_DEFAULTS),
     "game_executable_path": "",
     "scene_catalog": list(COLLECTED_SCENE_IDS),
     "story_queues": default_story_queues(),
@@ -200,6 +216,8 @@ def _sanitize(raw: object) -> dict[str, Any]:
     death = max(high, min(100, int(raw.get("strength_death", result["strength_death"]))))
     cap = max(0, min(100, int(raw.get("hard_cap", result["hard_cap"]))))
     result.update({
+        "socket_protocol": "v4" if raw.get("socket_protocol") == "v4" else "v3",
+        "ovc_profile": sanitize_ovc_profile(raw.get("ovc_profile")),
         "language": raw.get("language") if isinstance(raw.get("language"), str) and raw.get("language") in {"zh", "en", "ja"} else "zh",
         "strength_low": min(low, cap),
         "strength_medium": min(medium, cap),
@@ -208,6 +226,7 @@ def _sanitize(raw: object) -> dict[str, Any]:
         "hard_cap": cap,
         "onboarding_completed": raw.get("onboarding_completed") is True,
         "game_hud_enabled": bool(raw.get("game_hud_enabled", True)),
+        "hud_settings": sanitize_hud_settings(raw.get("hud_settings")),
         "game_executable_path": str(raw.get("game_executable_path", "")).strip(),
         "audio_empathy_enabled": bool(raw.get(
             "audio_empathy_enabled", raw.get("story_audio_enabled", False)

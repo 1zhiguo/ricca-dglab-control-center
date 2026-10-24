@@ -33,6 +33,13 @@ from .audio_pulse import (
     enumerate_audio_devices,
 )
 from .dglab_bridge import DGLabBridge
+from .dglab_v4_hub import DGLabV4Hub
+from .dglab_v4 import protocol_strength
+from .hud_settings import sanitize_hud_settings
+from .ovc_pipeline import OvcOutputPipeline, OvcOutputPlan
+from .manual_control import ManualPlayback
+from .ovc_controller import OvcController
+from . import ovc
 from .events import EventDetector
 from .capture import capture_state
 from .defeat_scene import DefeatSceneSession, DeathPenalty, scene_root
@@ -53,7 +60,7 @@ from .safety import SafetyGovernor, SUPPORTED_GAMEASSEMBLY_SHA256, is_story_scen
 from .scene_library import SceneLibrary, valid_scene_id
 from .scene_catalog import COLLECTED_SCENE_IDS
 from .story_queue import StoryQueuePlayer, sanitize_steps, MAX_STEPS
-from .product_config import story_mode
+from .product_config import story_mode, story_queue_switch
 from .waveforms import custom_frames, frames_for, waveform_catalog
 
 
@@ -215,6 +222,8 @@ class AppBackend(QObject):
     rawJsonChanged = Signal()
     sceneLibraryChanged = Signal()
     toastRequested = Signal(str, str)
+    outputProfileChanged = Signal()
+    devicesChanged = Signal()
 
     def __init__(self, reader: Callable[[], dict[str, Any]], *, demo: bool = False,
                  start_bridge: bool = True) -> None:
@@ -223,7 +232,6 @@ class AppBackend(QObject):
         self._queue: queue.Queue = queue.Queue()
         self._stop = threading.Event()
         self._worker = TelemetryWorker(self._queue, reader, self._stop, verify_build=not demo)
-        self._bridge = DGLabBridge(self._queue)
         self._safety = SafetyGovernor()
         self._detector = EventDetector()
         self._defeat_scene = DefeatSceneSession()
@@ -232,6 +240,25 @@ class AppBackend(QObject):
         self._priority_output_active = False
         self._priority_kind = ""
         self._config = ProductConfig()
+        self._output_profile = "coyote"
+        self._v4_devices: list[dict[str, Any]] = []
+        # Presentation only: keep the accepted choice visible while the
+        # Socket thread commits it. Readiness/output still use the bridge.
+        self._pulse_requested_selection: tuple[str, str] | None = None
+        self._ovc_requested_selection: tuple[str, str] | None = None
+        self._v4_hub = DGLabV4Hub(self._queue)
+        self._ovc_bridge = self._v4_hub.channel("ovc")
+        self._ovc_pipeline = OvcOutputPipeline(self._config.values["ovc_profile"])
+        self._ovc_controller = OvcController(self)
+        self._ovc_connected = False
+        self._ovc_route_paused = True
+        self._pulse_route_paused = False
+        self._ovc_plan = OvcOutputPlan()
+        self._ovc_status = "负鼠未连接"
+        self._v4_qr_url = self._v4_qr_source = ""
+        self._v4_error = ""
+        self._last_ovc_audit = None
+        self._bridge = self._make_bridge()
         self._scene_library = SceneLibrary(self._config.path.parent / "scenes.json")
         self._scene_capture_enabled = False
         self._last_scene_capture = None
@@ -257,7 +284,7 @@ class AppBackend(QObject):
         self._configure_probe_path()
         self._inspect_game_path()
         self._custom_waveforms = read_custom_waveforms()
-        config = self._config.values
+        config = self._profile_values()
         self._mapping = RiccaMappingEngine(
             hard_cap=config["hard_cap"],
             strengths=self._strength_settings(),
@@ -295,6 +322,8 @@ class AppBackend(QObject):
         self._audio_resume_after = 0.0
         self._tested_channels: set[str] = set()
         self._manual_test_channel = ""
+        self._manual_playback = {"coyote": ManualPlayback(), "ovc": ManualPlayback()}
+        self._manual_ui_state = {}
         self._audio_devices: list[dict[str, Any]] = enumerate_audio_devices()
         self._audio_worker: AudioCaptureWorker | None = None
         self._audio_stop = threading.Event()
@@ -315,13 +344,29 @@ class AppBackend(QObject):
         self._worker.start()
         if start_bridge:
             self._bridge.start()
+            self._v4_hub.start()
         self._restart_audio_capture()
 
     def _get(self, key: str, default: Any = None) -> Any:
         return self._state.get(key, default)
 
+    def _make_bridge(self):
+        if self.socketProtocol == "v4":
+            return self._v4_hub.channel("coyote")
+        return DGLabBridge(self._queue, lan_ip=getattr(self, "_lan_ip", ""))
+
+    def _profile_values(self) -> dict:
+        # Electrical configuration never changes when OVC connects or is edited.
+        return self._config.values
+
+    def _update_profile(self, values: dict) -> None:
+        self._config.update(values)
+
+    def _frames_for(self, key: str) -> tuple[str, ...]:
+        return frames_for(key, self._custom_waveforms)
+
     def _strength_settings(self) -> dict[str, int]:
-        values = self._config.values
+        values = self._profile_values()
         return {
             "low": _i(values.get("strength_low"), 5),
             "medium": _i(values.get("strength_medium"), 15),
@@ -330,7 +375,7 @@ class AppBackend(QObject):
         }
 
     def _refresh_mapping_config(self) -> None:
-        values = self._config.values
+        values = self._profile_values()
         self._mapping.configure(
             hard_cap=_i(values.get("hard_cap"), 30),
             strengths=self._strength_settings(),
@@ -340,7 +385,7 @@ class AppBackend(QObject):
 
     @Property("QVariantMap", notify=changed)
     def channelPolicies(self) -> dict:
-        return self._config.values["channel_policies"]
+        return self._profile_values()["channel_policies"]
 
     @Property(str, notify=languageChanged)
     def language(self) -> str:
@@ -372,7 +417,7 @@ class AppBackend(QObject):
 
     @Property("QVariantMap", notify=changed)
     def storyQueues(self) -> dict:
-        return self._config.values["story_queues"]
+        return self._profile_values()["story_queues"]
 
     @Property("QVariantMap", notify=changed)
     def storyQueueStatus(self) -> dict:
@@ -390,12 +435,9 @@ class AppBackend(QObject):
             return False
         queues, policies = deepcopy(self.storyQueues), deepcopy(self.channelPolicies)
         queues[channel] = clean
-        policies[channel]["rules"]["defeat_interaction"]["playback"] = "queue" if use_queue else "wave"
-        if "story_mode" in policies[channel]:
-            audio = story_mode(policies[channel]) in {"audio", "fixed_audio", "queue_audio"}
-            policies[channel]["story_mode"] = ("queue" if use_queue else "fixed") + ("_audio" if audio else "")
+        policies[channel] = story_queue_switch(policies[channel], use_queue)
         try:
-            self._config.update({"story_queues": queues, "channel_policies": policies})
+            self._update_profile({"story_queues": queues, "channel_policies": policies})
         except OSError as error:
             self.toastRequested.emit("保存失败", str(error))
             return False
@@ -405,6 +447,31 @@ class AppBackend(QObject):
         self.changed.emit()
         audit.record("story.queue_saved", channel=channel, count=len(clean), use_queue=use_queue)
         self.toastRequested.emit("保存成功", channel + " 队列已保存并应用；段落从头计时，强度上限与暂停状态不变。")
+        return True
+
+    @Slot(str, bool, result=bool)
+    def setStoryQueueEnabled(self, channel: str, enabled: bool) -> bool:
+        if channel not in {"A", "B"}:
+            return False
+        if enabled and not self.storyQueues[channel]:
+            self.toastRequested.emit("保存失败", "队列须包含 1–16 段。")
+            return False
+        policies = deepcopy(self.channelPolicies)
+        policies[channel] = story_queue_switch(policies[channel], enabled)
+        try:
+            self._update_profile({"channel_policies": policies})
+        except OSError as error:
+            self.toastRequested.emit("保存失败", str(error))
+            return False
+        # Only the selected channel's story clock changes; do not revoke B,
+        # battle feedback, death priority or the other device's authorization.
+        self._mapping.channel_policies = deepcopy(self.channelPolicies)
+        self._story_queue_player.reset(channel)
+        self._story_queue_tokens[channel] = ""
+        audit.record("story.queue_toggle", device="coyote", channel=channel, enabled=enabled,
+                     route_paused=self._pulse_route_paused)
+        self.changed.emit()
+        self.toastRequested.emit("保存成功", "剧情通道开关已立即保存并应用；设备暂停状态保持不变。")
         return True
 
     @Property(str, notify=changed)
@@ -515,6 +582,64 @@ class AppBackend(QObject):
     def gameHudEnabled(self) -> bool:
         return bool(self._config.values.get("game_hud_enabled", True))
 
+    @Property("QVariantMap", notify=changed)
+    def hudSettings(self) -> dict:
+        return sanitize_hud_settings(self._config.values.get("hud_settings"))
+
+    @Slot("QVariantMap", result=bool)
+    def saveHudSettings(self, options: dict) -> bool:
+        if not isinstance(options, dict):
+            return False
+        if (options.get("show_pulse") is False and options.get("show_ovc") is False
+                or options.get("show_a") is False and options.get("show_b") is False):
+            self.toastRequested.emit("保存失败", "至少显示一种设备和一个通道。")
+            return False
+        try:
+            self._config.update({"hud_settings": sanitize_hud_settings(options)})
+        except (OSError, ValueError, TypeError) as error:
+            self.toastRequested.emit("保存失败", str(error))
+            return False
+        self.changed.emit()
+        self.toastRequested.emit("保存成功", "HUD 设置已保存并应用。")
+        return True
+
+    @Property("QVariantMap", notify=changed)
+    def hudReadings(self) -> dict:
+        """Requested output, not measured device feedback. Never sends commands."""
+        pulse_live = bool(self._device_connected and self.outputArmed and not self.outputPaused
+                          and not self._stop_latched and not self._pulse_route_paused)
+        plan = self._ovc_plan
+        ovc_live = bool(self._ovc_connected and plan.allowed and not plan.paused
+                        and not self._stop_latched and not self._ovc_route_paused)
+        result = {}
+        for role, live, connected, cap, values in (
+                ("pulse", pulse_live, self._device_connected, self.hardCap, (self.previewA, self.previewB)),
+                ("ovc", ovc_live, self._ovc_connected, self._ovc_controller.hardCap,
+                 (plan.strength_a, plan.strength_b))):
+            paused = (self._stop_latched or (self._pulse_route_paused if role == "pulse" else self._ovc_route_paused)
+                      or (self._user_output_paused and not (role == "pulse" and self._priority_output_active)))
+            status = "未连接" if not connected else "同步" if live else "已暂停" if paused else "待机"
+            for channel, value in zip(("A", "B"), values):
+                effective_cap = cap
+                reason = ""
+                if role == "ovc" or self.socketProtocol == "v4":
+                    index = self.ovcDeviceIndex if role == "ovc" else self.v4DeviceIndex
+                    devices = self.ovcDevices if role == "ovc" else self.v4Devices
+                    if index:
+                        item = devices[index - 1]
+                        reason = item.get("channel" + channel + "Reason", "")
+                        if reason:
+                            value = 0
+                        maximum = (item.get("slotState") or {}).get("channel" + channel, {})
+                        maximum = maximum.get("intensityMax") if isinstance(maximum, dict) else None
+                        if type(maximum) in (int, float) and math.isfinite(maximum):
+                            effective_cap = min(cap, max(0, maximum))
+                strength = protocol_strength(value, effective_cap, "OVC_1" if role == "ovc" else "COYOTE_030") if live else 0
+                channel_status = {"channel-muted": "静音", "accessory-not-inserted": "未插配件"}.get(reason, "未就绪") if reason else status
+                result[role + channel] = {"strength": strength, "cap": cap, "live": live and not reason,
+                                          "status": channel_status, "bars": min(5, math.ceil(strength * 5 / max(1, cap)))}
+        return result
+
     @Slot(bool, result=bool)
     def setGameHudEnabled(self, enabled: bool) -> bool:
         try:
@@ -546,7 +671,7 @@ class AppBackend(QObject):
             return False
         self._disarm_output(f"{channel} 通道策略已修改，清空旧事件后自动应用", log=True)
         try:
-            self._config.update({"channel_policies": clean})
+            self._update_profile({"channel_policies": clean})
         except OSError as error:
             self._append_system_event("通道策略保存失败", str(error), "danger")
             return False
@@ -556,6 +681,10 @@ class AppBackend(QObject):
         return True
 
     def _wave_catalog(self) -> list[dict[str, Any]]:
+        if self.outputProfile == "ovc":
+            if getattr(self, "_ovc_wave_catalog_cache", None) is None:
+                self._ovc_wave_catalog_cache = ovc.waveform_catalog()
+            return self._ovc_wave_catalog_cache
         # QML reads this through many bindings on every UI notification. Frame
         # decoding/frequency calculation is static until the custom library
         # changes; do not rebuild hundreds of frame values on the output loop.
@@ -620,7 +749,7 @@ class AppBackend(QObject):
 
     @Property(bool, notify=changed)
     def outputArmed(self) -> bool:
-        return self._output_armed or self._priority_output_active
+        return self._output_armed or self._priority_output_active or self._manual_playback["coyote"].running
 
     @Property(str, notify=changed)
     def priorityOutputStatus(self) -> str:
@@ -629,6 +758,8 @@ class AppBackend(QObject):
     @Property(bool, notify=changed)
     def canRunDeviceTest(self) -> bool:
         return bool(self._device_connected and not self._manual_test_channel
+                    and not self._pulse_route_paused
+                    and self._profile_matches_device()
                     and self.onboardingCompleted and self.hardCap > 0
                     and not self._user_output_paused and not game_is_paused(self._state))
 
@@ -649,6 +780,8 @@ class AppBackend(QObject):
             and self.onboardingCompleted and self.hardCap > 0
             and not self._user_output_paused
             and self._device_connected
+            and not self._pulse_route_paused
+            and self._profile_matches_device()
             and self.telemetryOnline
             and bool(self._get("build_supported"))
             and (self._decision.allow_gameplay_output or self._decision.allow_story_output)
@@ -659,6 +792,8 @@ class AppBackend(QObject):
 
     @Property(str, notify=changed)
     def outputStatus(self) -> str:
+        if self._manual_playback["coyote"].enabled:
+            return self._manual_blocker("coyote") or ("手动播放中" if self._manual_playback["coyote"].running else "手动模式待机 · 自动游戏反馈已暂停")
         if not self.onboardingCompleted or self._onboarding_active:
             return "请先完成新手教程并手动保存安全硬上限"
         if self.hardCap == 0:
@@ -705,7 +840,7 @@ class AppBackend(QObject):
 
     @Property(int, notify=changed)
     def hardCap(self) -> int:
-        return _i(self._config.values.get("hard_cap"), 30)
+        return _i(self._profile_values().get("hard_cap"), 30)
 
     @Property(bool, notify=changed)
     def onboardingCompleted(self) -> bool:
@@ -738,7 +873,8 @@ class AppBackend(QObject):
         self._tested_channels.clear()
         previous = deepcopy(self._config.values)
         try:
-            self._config.update({"hard_cap": cap, "onboarding_completed": True})
+            updates = {"ovc_profile": {**self._profile_values(), "hard_cap": cap}} if self.outputProfile == "ovc" else {"hard_cap": cap}
+            self._config.update({**updates, "onboarding_completed": True})
         except OSError as error:
             self._config.values = previous
             self._onboarding_error = f"保存失败，未完成教程：{error}"
@@ -769,18 +905,18 @@ class AppBackend(QObject):
 
     @Property(float, notify=changed)
     def audioGain(self) -> float:
-        return float(self._config.values.get("audio_gain", 1.0))
+        return float(self._profile_values().get("audio_gain", 1.0))
 
     @Property(int, notify=changed)
     def audioQueueMinimum(self) -> int:
-        return min(self.hardCap, int(self._config.values.get("audio_queue_minimum", 0)))
+        return min(self.hardCap, int(self._profile_values().get("audio_queue_minimum", 0)))
 
     @Slot(int, result=bool)
     def saveAudioQueueMinimum(self, value: int) -> bool:
         if not 0 <= value <= self.hardCap:
             return False
         try:
-            self._config.update({"audio_queue_minimum": value})
+            self._update_profile({"audio_queue_minimum": value})
         except OSError as error:
             self.toastRequested.emit("保存失败", str(error))
             return False
@@ -793,7 +929,7 @@ class AppBackend(QObject):
         if not math.isfinite(gain) or not 0 <= gain <= 10:
             return False
         try:
-            self._config.update({"audio_gain": round(gain, 1)})
+            self._update_profile({"audio_gain": round(gain, 1)})
         except OSError as error:
             self.toastRequested.emit("保存失败", str(error))
             return False
@@ -925,7 +1061,7 @@ class AppBackend(QObject):
     def eventMappings(self) -> list[dict[str, Any]]:
         wave_names = {item["key"]: item["name"] for item in self._wave_catalog()}
         result = []
-        for key, rule in (self._config.values.get("event_rules") or {}).items():
+        for key, rule in (self._profile_values().get("event_rules") or {}).items():
             item = dict(rule)
             item.update({"key": key, "waveName": wave_names.get(rule.get("wave"), rule.get("wave", "—"))})
             result.append(item)
@@ -934,6 +1070,15 @@ class AppBackend(QObject):
     @Property(bool, notify=changed)
     def telemetryOnline(self) -> bool:
         return bool(self._last_received and time.monotonic() - self._last_received < 0.5)
+
+    @Property(bool, notify=changed)
+    def telemetryReady(self) -> bool:
+        """Display readiness, not just receipt of a failed polling response."""
+        return bool(self.telemetryOnline and not self._reader_error
+                    and self._state.get("status") == "ok"
+                    and self._state.get("connected", True)
+                    and self._state.get("build_supported") is True
+                    and self._state.get("process_id"))
 
     @Property(str, notify=changed)
     def telemetryStatus(self) -> str:
@@ -946,6 +1091,437 @@ class AppBackend(QObject):
     @Property(bool, notify=changed)
     def serverReady(self) -> bool:
         return self._server_ready
+
+    @Property(str, notify=changed)
+    def socketProtocol(self) -> str:
+        return self._config.values.get("socket_protocol", "v3")
+
+    @Property(str, notify=changed)
+    def outputProfile(self) -> str:
+        return "coyote"
+
+    @Property(str, notify=changed)
+    def outputProfileName(self) -> str:
+        return "郊狼 Pulse · 原有配置"
+
+    @Property("QVariantList", notify=devicesChanged)
+    def v4Devices(self) -> list[dict]:
+        return [item for item in self._v4_devices if item.get("type") == "COYOTE_030"]
+
+    @Property("QVariantList", notify=devicesChanged)
+    def ovcDevices(self) -> list[dict]:
+        return [item for item in self._v4_devices if item.get("type") == "OVC_1"]
+
+    def _route_index(self, devices: list[dict], bridge, selection: tuple[str, str] | None = None) -> int:
+        client_id, slot_id = selection if selection is not None else (bridge.selected_client_id, bridge.selected_slot_id)
+        return next((index for index, item in enumerate(devices, 1)
+                     if item.get("clientId") == client_id and item.get("slotId") == slot_id), 0)
+
+    @Property(int, notify=changed)
+    def v4DeviceIndex(self) -> int:
+        if self.socketProtocol != "v4":
+            return 0
+        return self._route_index(self.v4Devices, self._bridge, self._pulse_requested_selection)
+
+    @Property(bool, notify=changed)
+    def pulseDeviceWaiting(self) -> bool:
+        return self.socketProtocol == "v4" and self.v4DeviceIndex > 0 and not self._device_connected
+
+    @Property(bool, notify=changed)
+    def pulseDeviceMuted(self) -> bool:
+        index = self.v4DeviceIndex
+        if not index:
+            return False
+        item = self.v4Devices[index - 1]
+        return all(item.get("channel" + channel + "Reason") == "channel-muted" for channel in ("A", "B"))
+
+    @Property(str, notify=changed)
+    def pulseWaitingHint(self) -> str:
+        if self.pulseDeviceMuted:
+            return "郊狼 A/B 已静音 · 请在 DG-LAB App 解除静音"
+        return "郊狼未就绪 · 保留设备选择，禁止输出"
+
+    @Property(int, notify=changed)
+    def ovcDeviceIndex(self) -> int:
+        return self._route_index(self.ovcDevices, self._ovc_bridge, self._ovc_requested_selection)
+
+    @Property(bool, notify=changed)
+    def v4AppConnected(self) -> bool:
+        return bool(self._v4_hub.app_connected)
+
+    @Property(QObject, constant=True)
+    def ovcController(self):
+        return self._ovc_controller
+
+    @Property("QVariantMap", notify=changed)
+    def ovcPlan(self) -> dict:
+        return self._ovc_plan.as_dict()
+
+    @Property(bool, notify=changed)
+    def ovcConnected(self) -> bool:
+        return self._ovc_connected
+
+    @Property(bool, notify=changed)
+    def ovcRoutePaused(self) -> bool:
+        return self._ovc_route_paused
+
+    @Property(bool, notify=changed)
+    def pulseRoutePaused(self) -> bool:
+        return self._pulse_route_paused
+
+    @Property(str, notify=changed)
+    def ovcStatus(self) -> str:
+        return self._ovc_status
+
+    @Property(str, notify=changed)
+    def v4QrSource(self) -> str:
+        return self._v4_qr_source
+
+    @Property(bool, notify=changed)
+    def anyDeviceConnected(self) -> bool:
+        return self._device_connected or self._ovc_connected
+
+    @Property(bool, notify=changed)
+    def anyOutputArmed(self) -> bool:
+        return self._output_armed or self._priority_output_active or self._ovc_plan.allowed or self._manual_playback["coyote"].running
+
+    @Property(str, notify=changed)
+    def v4DeviceStatus(self) -> str:
+        index = self.v4DeviceIndex
+        if not index:
+            return "尚未选择输出设备"
+        channels = self._device_channels_status(self.v4Devices[index - 1])
+        if self.pulseDeviceMuted:
+            return " · ".join(("通道已静音", channels))
+        return " · ".join(("等待设备就绪", channels)) if self.pulseDeviceWaiting else channels
+
+    @Property(str, notify=changed)
+    def ovcDeviceStatus(self) -> str:
+        index = self.ovcDeviceIndex
+        return self._device_channels_status(self.ovcDevices[index - 1]) if index else "尚未选择输出设备"
+
+    @Property(str, notify=changed)
+    def ovcAccessoryHint(self) -> str:
+        index = self.ovcDeviceIndex
+        if not index:
+            return ""
+        device = self.ovcDevices[index - 1]
+        missing = [channel for channel in ("A", "B")
+                   if device.get("channel" + channel + "Reason") == "accessory-not-inserted"]
+        if len(missing) == 2:
+            return "控制器已连接，但未插入振动配件。请将配件插入负鼠 A 或 B 口；对应通道就绪后才能启用振动。"
+        if missing:
+            return ("A 口未插入振动配件，该通道不输出；已就绪的 B 通道可正常使用。" if missing[0] == "A" else
+                    "B 口未插入振动配件，该通道不输出；已就绪的 A 通道可正常使用。")
+        return ""
+
+    @Property(str, notify=changed)
+    def pulseEnableReason(self) -> str:
+        return self._device_enable_reason("coyote")
+
+    @Property(str, notify=changed)
+    def ovcEnableReason(self) -> str:
+        return self._device_enable_reason("ovc")
+
+    def _device_enable_reason(self, role: str) -> str:
+        if self._stop_latched:
+            return "全局急停中，请先在右上角恢复输出。"
+        if self._onboarding_active or not self.onboardingCompleted:
+            return "请先完成新手教程并手动保存安全硬上限"
+        connected = self._ovc_connected if role == "ovc" else self._device_connected
+        if not connected:
+            if role == "ovc" or self.socketProtocol == "v4":
+                if self._v4_error:
+                    return "连接服务异常，请打开连接帮助。"
+                if not self.v4AppConnected:
+                    return "手机 App 尚未连接，请先扫码。"
+                index = self.ovcDeviceIndex if role == "ovc" else self.v4DeviceIndex
+                if not index:
+                    return "尚未发现或选择对应设备，请在 App 中连接设备。"
+                device = (self.ovcDevices if role == "ovc" else self.v4Devices)[index - 1]
+                reasons = [device.get("channel" + channel + "Reason", "missing-device-state")
+                           for channel in ("A", "B")]
+                if role == "ovc" and all(reason == "accessory-not-inserted" for reason in reasons):
+                    return self.ovcAccessoryHint
+                if all(reason == "channel-muted" for reason in reasons):
+                    return "两个通道均已静音，请在 DG-LAB App 解除静音。"
+                if "bluetooth-not-connected" in reasons:
+                    return "控制器蓝牙尚未连接，请在 DG-LAB App 中连接设备。"
+                if any(reasons):
+                    return "设备尚未就绪：" + self._device_channels_status(device)
+                sender = self._ovc_bridge if role == "ovc" else self._bridge
+                if getattr(sender, "_readiness_failure_latched", False) is True:
+                    return "设备同步或归零确认失败，请重新选择设备并查看诊断日志。"
+                return "正在同步设备状态并确认归零，请稍候。"
+            return "手机 App 尚未连接，请先扫码。"
+        cap = self._ovc_controller.hardCap if role == "ovc" else self.hardCap
+        if cap <= 0:
+            return "硬上限为 0，不能输出"
+        if role == "ovc" and cap < 10:
+            return "负鼠硬上限低于 10，量化后为 0，请检查强度设置。"
+        if self._user_output_paused:
+            return "输出已全局暂停，请先在右上角恢复输出。"
+        return ""
+
+    @Slot(str)
+    def explainOutputUnavailable(self, role: str) -> None:
+        if role in {"coyote", "ovc"}:
+            self.toastRequested.emit("暂时无法启用", self._device_enable_reason(role))
+
+    @staticmethod
+    def _v4_link_present(device: dict) -> bool:
+        props, state = device.get("props") or {}, device.get("slotState") or {}
+        return bool(state.get("hasDevice") is not False and props.get("connectState") != "disconnected"
+                    and (state.get("hasDevice") is True or props.get("connectState") == "connected"))
+
+    def _auto_select_new_v4_devices(self, previous: list[dict]) -> None:
+        """Select a new physical link once; never authorize output or retry on every patch."""
+        def identity(item):
+            return item.get("clientId"), item.get("slotId"), item.get("type")
+        old = {identity(item): item for item in previous}
+        for role, kind in (("coyote", "COYOTE_030"), ("ovc", "OVC_1")):
+            if role == "coyote" and self.socketProtocol != "v4":
+                continue
+            candidates = [item for item in self._v4_devices if item.get("type") == kind
+                          and all(identity(item)[:2]) and self._v4_link_present(item)
+                          and (identity(item) not in old or not self._v4_link_present(old[identity(item)]))]
+            if not candidates:
+                continue
+            # Snapshot order is the tie-breaker if several links arrive together.
+            item = candidates[-1]
+            sender = self._bridge if role == "coyote" else self._ovc_bridge
+            already_connected = self._device_connected if role == "coyote" else self._ovc_connected
+            if (already_connected and (sender.selected_client_id, sender.selected_slot_id)
+                    == (item["clientId"], item["slotId"])):
+                continue  # An initial snapshot must not interrupt this live route.
+            devices = self.v4Devices if role == "coyote" else self.ovcDevices
+            index = devices.index(item) + 1
+            accepted = self.selectV4Device(index) if role == "coyote" else self.selectOvcDevice(index)
+            if accepted:
+                audit.record("socket.v4_auto_selection", role=role,
+                             app_client_id=item["clientId"], slot_id=item["slotId"], output_paused=True)
+
+    def _device_channels_status(self, device: dict) -> str:
+        props = device.get("props") or {}
+        labels = {"": "可用", "accessory-not-inserted": "配件未插入", "channel-muted": "通道已静音",
+                  "bluetooth-not-connected": "蓝牙未连接", "channel-fault-or-blocked": "通道故障或屏蔽",
+                  "missing-device-state": "设备状态未同步"}
+        states = [f"{channel} · {labels.get(device.get('channel' + channel + 'Reason', ''), device.get('channel' + channel + 'Reason', ''))}"
+                  + f" · App {props.get('intensity' + channel, '—')}" for channel in ("A", "B")]
+        return "    |    ".join(states)
+
+    def _profile_matches_device(self) -> bool:
+        if self.socketProtocol != "v4":
+            return True
+        return self._bridge.device_type == "COYOTE_030"
+
+    @Slot(str, result=bool)
+    def selectOutputProfile(self, name: str) -> bool:
+        # Kept for older UI callers; vibration now has a separate controller.
+        return name == "coyote"
+
+    def _switch_output_profile(self, name: str) -> None:
+        return  # Never replace electrical output with vibration.
+
+    @Slot(int, result=bool)
+    def selectV4Device(self, index: int) -> bool:
+        devices = self.v4Devices
+        if self.socketProtocol != "v4" or not 0 <= index <= len(devices):
+            return False
+        self._manual_playback["coyote"].stop("manual-device-changed")
+        self._pulse_route_paused = True
+        self._bridge.set_paused(True)
+        self._bridge.emergency_stop()
+        self._disarm_output("Pulse 设备已切换")
+        self._device_connected = False
+        requested = ("", "")
+        if index == 0:
+            selected = self._bridge.select_device("", "")
+        else:
+            item = devices[index - 1]
+            requested = (str(item["clientId"]), str(item["slotId"]))
+            selected = self._bridge.select_device(*requested)
+        if not selected:
+            self.changed.emit()
+            return False
+        self._pulse_requested_selection = requested
+        self._bridge_status = (self.pulseWaitingHint if index else
+                               "设备选择已更新 · 核对强度后手动恢复输出")
+        self.changed.emit()
+        return True
+
+    @Slot(int, result=bool)
+    def selectOvcDevice(self, index: int) -> bool:
+        devices = self.ovcDevices
+        if not 0 <= index <= len(devices):
+            return False
+        self._manual_playback["ovc"].stop("manual-device-changed")
+        self._ovc_route_paused = True
+        self._ovc_connected = False
+        self._ovc_bridge.set_paused(True)
+        self._ovc_bridge.emergency_stop()
+        self._ovc_pipeline.stop()
+        self._ovc_plan = OvcOutputPlan()
+        item = devices[index - 1] if index else {}
+        selected = self._v4_hub.select_device("ovc", str(item.get("clientId", "")), str(item.get("slotId", "")))
+        if selected:
+            self._ovc_requested_selection = (str(item.get("clientId", "")), str(item.get("slotId", "")))
+        self._ovc_status = "负鼠选择已更新 · 就绪后单独启用振动"
+        self.changed.emit()
+        return bool(selected)
+
+    @Slot()
+    def toggleOvcOutput(self) -> None:
+        if self._ovc_route_paused and self.ovcEnableReason:
+            self.explainOutputUnavailable("ovc")
+            return
+        if not self._ovc_connected or self._stop_latched:
+            return
+        self._ovc_route_paused = not self._ovc_route_paused
+        if not self._ovc_route_paused:
+            self._ovc_bridge.clear_global_emergency_stop()
+        else:
+            self._ovc_bridge.emergency_stop()
+            self._ovc_pipeline.clear_pulses()
+        self._sync_ovc_output(time.monotonic())
+        self.changed.emit()
+
+    @Slot()
+    def togglePulseOutput(self) -> None:
+        if self._pulse_route_paused and self.pulseEnableReason:
+            self.explainOutputUnavailable("coyote")
+            return
+        if self.pulseDeviceMuted:
+            self.explainPulseMute()
+            return
+        if self._stop_latched or not self._device_connected:
+            return
+        self._pulse_route_paused = not self._pulse_route_paused
+        if not self._pulse_route_paused:
+            self._bridge.clear_global_emergency_stop()
+        else:
+            self._bridge.emergency_stop()
+            self._mapping.clear_pulses()
+            self._death_penalty.cancel()
+        self._sync_output_pause()
+        self.changed.emit()
+
+    @Slot()
+    def explainPulseMute(self) -> None:
+        self.toastRequested.emit("通道已静音", "请在 DG-LAB App 的郊狼设备页解除所需通道的静音。插件不会代为解除静音；状态更新并确认归零后，再手动启用 Pulse。")
+
+    def onOvcSettingsChanged(self) -> None:
+        profile = self._config.values["ovc_profile"]
+        audio_keys = {"audio_gain", "audio_queue_minimum"}
+        old = {k: v for k, v in self._ovc_pipeline.profile.items() if k not in audio_keys}
+        new = {k: v for k, v in profile.items() if k not in audio_keys}
+        if old != new:
+            self._ovc_bridge.emergency_stop()
+        self._ovc_pipeline.configure(profile)
+        self._sync_ovc_output(time.monotonic())
+        self.changed.emit()
+
+    def onOvcStoryToggleChanged(self, channel: str) -> None:
+        self._ovc_pipeline.configure_story_channel(self._config.values["ovc_profile"], channel)
+        self._sync_ovc_output(time.monotonic())
+        audit.record("story.queue_toggle", device="ovc", channel=channel,
+                     enabled=self._config.values["ovc_profile"]["channel_policies"][channel]["rules"]["defeat_interaction"]["enabled"],
+                     route_paused=self._ovc_route_paused)
+        self.changed.emit()
+
+    def _ovc_eligible(self) -> bool:
+        return bool(not self._manual_playback["ovc"].enabled and not self._demo and not self._stop_latched
+                    and not self._onboarding_active and self.onboardingCompleted
+                    and self._ovc_connected and not self._ovc_route_paused
+                    and self._ovc_pipeline.hard_cap > 0
+                    and self.telemetryOnline and not self._reader_error
+                    and self._state.get("status") == "ok"
+                    and self._state.get("build_supported") is True)
+
+    def _sync_ovc_output(self, now: float) -> bool:
+        previous = self._ovc_plan
+        if self._manual_playback["ovc"].enabled:
+            changed = self._sync_manual_output("ovc", now)
+            return previous != self._ovc_plan or changed
+        plan = self._ovc_pipeline.render(now=now, allow_output=self._ovc_eligible(),
+            user_paused=self._user_output_paused, emergency_stop=self._stop_latched,
+            telemetry_fresh=self.telemetryOnline and not self._reader_error,
+            audio_enabled=self.audioEmpathyEnabled,
+            audio_fresh=0 <= now - self._audio_last_sample < .35,
+            audio_factor=self._audio_mapper.envelope,
+            audio_points=self._audio_points, audio_above_gate=self._audio_level > self.audioGate,
+            story_allowed=self._defeat_story_allowed())
+        self._ovc_plan = plan
+        self._ovc_controller.updateStatus(plan.queue_status)
+        self._ovc_bridge.set_paused(self._stop_latched or plan.paused or self._ovc_route_paused)
+        if plan.allowed:
+            self._ovc_bridge.update_auto_outputs(plan.strength_a, plan.frames_a,
+                wave_key_a=plan.wave_key_a, strength_b=plan.strength_b,
+                frames_b=plan.frames_b, wave_key_b=plan.wave_key_b, hard_cap=plan.hard_cap)
+        self._ovc_bridge.set_auto_enabled(plan.allowed)
+        if self._ovc_connected:
+            self._ovc_status = ("负鼠振动同步中" if plan.allowed and not plan.paused else
+                                "负鼠已暂停" if self._ovc_route_paused or self._user_output_paused else
+                                "负鼠已就绪 · 等待有效游戏事件")
+        signature = (plan.allowed, plan.paused, plan.reason, plan.wave_a, plan.wave_b, plan.hard_cap)
+        if signature != self._last_ovc_audit:
+            audit.record("output.ovc_gate", allowed=plan.allowed, paused=plan.paused,
+                         reason=plan.reason, connected=self._ovc_connected,
+                         route_paused=self._ovc_route_paused, hard_cap=plan.hard_cap,
+                         requested={"A": plan.strength_a, "B": plan.strength_b},
+                         waves={"A": plan.wave_a, "B": plan.wave_b})
+            self._last_ovc_audit = signature
+        return previous != plan
+
+    def _discard_old_bridge_events(self, *, all_routes: bool = False) -> None:
+        remaining = []
+        while True:
+            try:
+                item = self._queue.get_nowait()
+            except queue.Empty:
+                break
+            if item[0] != "dglab" or (not all_routes and item[1].get("role", "coyote") != "coyote"):
+                remaining.append(item)
+        for item in remaining:
+            self._queue.put(item)
+
+    @Slot(str, result=bool)
+    def selectSocketProtocol(self, protocol: str) -> bool:
+        if protocol not in {"v3", "v4"}:
+            return False
+        if protocol == self.socketProtocol:
+            return True
+        self._pulse_route_paused = True
+        self._disarm_output("Pulse 协议已切换")
+        self._bridge.stop()
+        # Never start a second sender if shutdown could not finish.
+        if self._bridge._thread is not None and self._bridge._thread.is_alive():
+            self.toastRequested.emit("切换失败", "旧 Socket 尚未停止，请退出插件后重试。")
+            return False
+        try:
+            self._config.update({"socket_protocol": protocol})
+        except OSError as error:
+            self.toastRequested.emit("保存失败", str(error))
+            return False
+        self._discard_old_bridge_events()
+        self._bridge = self._make_bridge()
+        self._pulse_requested_selection = None
+        self._server_ready = self._device_connected = False
+        self._server_error = self._qr_url = self._qr_source = ""
+        self._bridge_status = "正在重新启动 Socket…"
+        self._lan_ip = self._bridge.lan_ip
+        self._lan_addresses = list(self._bridge.available_lan_ips)
+        # The hotkey's synchronous callback dereferences backend._bridge.
+        self._bridge.latch_global_emergency_stop()
+        if self._start_bridge_enabled:
+            self._bridge.start()
+        if protocol == "v4" and self._v4_hub.server_ready:
+            self._apply_bridge({"event": "ready", "role": "hub", "qr_url": self._v4_hub.qr_url,
+                                "port": self._v4_hub.port, "lan_ip": self._v4_hub.lan_ip})
+            self._auto_select_new_v4_devices([item for item in self._v4_devices if item.get("type") != "COYOTE_030"])
+        self.changed.emit()
+        self.toastRequested.emit("保存成功", "连接协议已保存，请重新扫码并手动恢复输出。")
+        return True
 
     @Property(bool, notify=changed)
     def deviceConnected(self) -> bool:
@@ -995,6 +1571,8 @@ class AppBackend(QObject):
 
     @Property(bool, notify=changed)
     def outputPaused(self) -> bool:
+        if self._manual_playback["coyote"].enabled:
+            return not self._manual_playback["coyote"].running or bool(self._manual_blocker("coyote")) or self._pulse_route_paused
         if self._priority_output_active:
             return False
         return not (
@@ -1011,22 +1589,177 @@ class AppBackend(QObject):
     def userOutputPaused(self) -> bool:
         return self._user_output_paused
 
+    def _manual_blocker(self, device: str) -> str:
+        if self._demo or self._closed:
+            return "演示模式不发送设备输出"
+        if self._stop_latched:
+            return "请先解除全局急停，再手动开始"
+        if self._user_output_paused:
+            return "请先在右上角恢复输出，再手动开始"
+        if self._onboarding_active or not self.onboardingCompleted:
+            return "请先完成新手教程并保存硬上限"
+        connected = self._ovc_connected if device == "ovc" else self._device_connected
+        sender = self._ovc_bridge if device == "ovc" else self._bridge
+        if not connected or not sender.connected:
+            return self._device_enable_reason(device) or "等待设备就绪，不能绕过连接或静音保护"
+        if device == "coyote" and not self._profile_matches_device():
+            return "设备类型不匹配"
+        cap = self._ovc_controller.hardCap if device == "ovc" else self.hardCap
+        return "硬上限为 0，不能输出" if cap <= 0 else ""
+
+    @Property("QVariantMap", notify=changed)
+    def manualOutputs(self) -> dict:
+        now = time.monotonic()
+        result = {}
+        for device, playback in self._manual_playback.items():
+            blocker = self._manual_blocker(device)
+            result[device] = {**playback.summary(now), "blocker": blocker,
+                              "can_start": playback.enabled and not blocker}
+        return result
+
+    @Slot(str, bool, result=bool)
+    def setManualMode(self, device: str, enabled: bool) -> bool:
+        if device not in self._manual_playback:
+            return False
+        playback = self._manual_playback[device]
+        if playback.enabled == enabled:
+            return True
+        self.stopManualOutput(device)
+        playback.enabled = enabled
+        if device == "coyote":
+            self._mapping.clear_pulses()
+            self._death_penalty.cancel()
+            self._defeat_scene.cancel_pulses()
+            self._story_queue_player.reset()
+            self._output_armed = self._priority_output_active = False
+            self._priority_kind = ""
+            if not enabled:
+                self._pulse_route_paused = True
+        else:
+            self._ovc_pipeline.stop()
+            self._ovc_controller.updateStatus({})
+            if not enabled:
+                self._ovc_route_paused = True
+        audit.record("manual.mode", device=device, enabled=enabled)
+        self.changed.emit()
+        return True
+
+    @Slot(str, int, str, int, str, int, result=bool)
+    def startManualOutput(self, device: str, a: int, wave_a: str, b: int, wave_b: str, seconds: int) -> bool:
+        if device not in self._manual_playback:
+            return False
+        playback = self._manual_playback[device]
+        blocker = self._manual_blocker(device)
+        if not playback.enabled or blocker:
+            self.toastRequested.emit("手动输出未启动", blocker or "请先进入手动模式")
+            return False
+        catalog = self._ovc_controller.waveformCatalog if device == "ovc" else self.waveformCatalog
+        waves = {item["key"] for item in catalog}
+        cap = self._ovc_controller.hardCap if device == "ovc" else self.hardCap
+        # Quantization is the existing OVC protocol rule; do not claim 1–9
+        # will produce vibration or alter any saved game intensity.
+        if device == "ovc":
+            if not (0 <= a <= 200 and 0 <= b <= 200):
+                return False
+            a, b = min(a, cap) // 10 * 10, min(b, cap) // 10 * 10
+        if not playback.start(a, wave_a, b, wave_b, seconds, now=time.monotonic(), cap=cap, waves=waves,
+                              max_strength=200 if device == "ovc" else 100):
+            self.toastRequested.emit("手动输出未启动", "请检查波形、强度和时长；至少一个通道需要非零强度")
+            return False
+        sender = self._ovc_bridge if device == "ovc" else self._bridge
+        sender.set_paused(True)  # Existing zero/clear barrier precedes playback.
+        if device == "ovc":
+            self._ovc_route_paused = False
+        else:
+            self._pulse_route_paused = False
+        audit.record("manual.start", device=device, strength_a=a, strength_b=b,
+                     wave_a=wave_a, wave_b=wave_b, seconds=seconds, hard_cap=cap)
+        self._sync_manual_output(device, time.monotonic())
+        self.changed.emit()
+        return True
+
+    @Slot(str)
+    def stopManualOutput(self, device: str) -> None:
+        if device not in self._manual_playback:
+            return
+        self._manual_playback[device].stop()
+        sender = self._ovc_bridge if device == "ovc" else self._bridge
+        sender.set_auto_enabled(False)
+        sender.set_paused(True)
+        sender.emergency_stop()
+        if device == "coyote":
+            self._preview_a = self._preview_b = 0.0
+            self._wave_a = self._wave_b = "idle"
+        else:
+            self._ovc_plan = OvcOutputPlan(hard_cap=self._ovc_controller.hardCap, reason="manual-stopped")
+        self.changed.emit()
+
+    def _sync_manual_output(self, device: str, now: float) -> bool:
+        playback = self._manual_playback[device]
+        was_running = playback.running
+        route_paused = self._ovc_route_paused if device == "ovc" else self._pulse_route_paused
+        playback.check(now=now, blocker=self._manual_blocker(device) or ("manual-route-paused" if route_paused else ""))
+        sender = self._ovc_bridge if device == "ovc" else self._bridge
+        if was_running and not playback.running:
+            sender.emergency_stop()
+            audit.record("manual.stop", device=device, reason=playback.reason)
+        cap = self._ovc_controller.hardCap if device == "ovc" else self.hardCap
+        frame_builder = ovc.frames_for if device == "ovc" else self._frames_for
+        a = min(cap, playback.strength_a) if playback.running else 0
+        b = min(cap, playback.strength_b) if playback.running else 0
+        frames_a = frame_builder(playback.wave_a) if a else ()
+        frames_b = frame_builder(playback.wave_b) if b else ()
+        if playback.running and ((a and not frames_a) or (b and not frames_b)):
+            playback.stop("manual-wave-missing")
+            a = b = 0
+            frames_a = frames_b = ()
+            sender.emergency_stop()
+        sender.set_paused(not playback.running)
+        if playback.running:
+            sender.update_auto_outputs(a, frames_a, wave_key_a=f"manual:{playback.sequence}:{playback.wave_a}",
+                strength_b=b, frames_b=frames_b, wave_key_b=f"manual:{playback.sequence}:{playback.wave_b}", hard_cap=cap)
+        sender.set_auto_enabled(playback.running)
+        if device == "ovc":
+            self._ovc_plan = OvcOutputPlan(strength_a=a, strength_b=b, wave_a=playback.wave_a,
+                wave_b=playback.wave_b, hard_cap=cap, allowed=playback.running,
+                paused=not playback.running, reason=playback.reason)
+            self._ovc_status = "手动播放中" if playback.running else "手动模式待机 · 自动游戏反馈已暂停"
+        else:
+            self._preview_a, self._preview_b = a, b
+            self._wave_a, self._wave_b = playback.wave_a, playback.wave_b
+        summary = playback.summary(now)
+        changed = self._manual_ui_state.get(device) != summary
+        self._manual_ui_state[device] = summary
+        return changed
+
+    @Property(bool, notify=changed)
+    def emergencyStopped(self) -> bool:
+        """Display the existing latch without changing its output semantics."""
+        return self._stop_latched
+
     @Slot()
     def toggleOutputPause(self) -> None:
         self._user_output_paused = not self._user_output_paused
+        if self._user_output_paused:
+            for device, playback in self._manual_playback.items():
+                if playback.enabled:
+                    self.stopManualOutput(device)
         if not self._user_output_paused:
             self._bridge.clear_global_emergency_stop()
+            self._v4_hub.clear_global_emergency_stop()
             self._stop_latched = False
         elif self._priority_kind != "死亡惩罚":
             self._priority_output_active = False
         self._sync_output_pause()
+        self._sync_ovc_output(time.monotonic())
         self._append_system_event("输出已暂停" if self._user_output_paused else "输出暂停已解除",
                                   "普通输出遵循暂停；死亡惩罚优先于普通暂停，紧急归零可停止全部输出", "warning")
         self.changed.emit()
 
     def _sync_output_pause(self) -> None:
         paused = self._user_output_paused or game_is_paused(self._state)
-        self._bridge.set_paused(self._stop_latched or (paused and not self._priority_output_active))
+        manual = self._manual_playback["coyote"]
+        self._bridge.set_paused((not manual.running or bool(self._manual_blocker("coyote")) or self._pulse_route_paused) if manual.enabled else self._stop_latched or self._pulse_route_paused or (paused and not self._priority_output_active))
         if paused == self._pause_active:
             return
         self._pause_active = paused
@@ -1285,6 +2018,8 @@ class AppBackend(QObject):
         if address == self._lan_ip:
             return
         if self._bridge.set_lan_ip(address):
+            if self.socketProtocol != "v4":
+                self._v4_hub.set_lan_ip(address)
             self._disarm_output("连接地址已切换，请核对并重新扫码", log=True)
             self._bridge.emergency_stop()
             self._manual_test_channel = ""
@@ -1294,6 +2029,8 @@ class AppBackend(QObject):
     @Slot()
     def refreshLanAddresses(self) -> None:
         self._bridge.refresh_lan_ips()
+        if self.socketProtocol != "v4":
+            self._v4_hub.refresh_lan_ips()
         self._lan_addresses = list(self._bridge.available_lan_ips) or ["127.0.0.1"]
         if self._lan_ip not in self._lan_addresses:
             self.selectLanAddress(self._lan_addresses[0])
@@ -1304,7 +2041,8 @@ class AppBackend(QObject):
         self.refreshLanAddresses()
         port = self._bridge.port
         lines = [f"Ricca × DG-LAB {__version__}",
-                 f"Socket：{'就绪' if self._server_ready else '未就绪'} · TCP {port}",
+                 f"Socket {self.socketProtocol.upper()}：{'就绪' if self._server_ready else '未就绪'} · TCP {port}",
+                 self.outputProfileName,
                  f"连接地址：{self._lan_ip}:{port}",
                  f"二维码：{'可用' if self._qr_source else '不可用'} · 手机：{'已连接' if self._device_connected else '未绑定'}"]
         log_status = audit.status()
@@ -1313,6 +2051,11 @@ class AppBackend(QObject):
                       f"配置：{self._config.path} · 教程完成 {self.onboardingCompleted} · 硬上限 {self.hardCap}"])
         if self._server_error:
             lines.append("服务错误：" + self._server_error)
+        if self.socketProtocol == "v4":
+            lines.append(f"V4 App：{'已连接' if self.v4AppConnected else '未连接'} · 已发现设备 {len(self._v4_devices)}")
+            for device in self._v4_devices:
+                lines.append(f"设备 {device.get('name', '')} · {device.get('type', '')} · "
+                             f"slot {device.get('slotId', '')} · {device.get('reason', '')}")
         try:
             listeners = port_listeners(port)
             lines.extend(f"端口监听：{item['name']} · PID {item['pid']} · " + ("本窗口" if item["ours"] else "其他进程")
@@ -1327,7 +2070,9 @@ class AppBackend(QObject):
             "", "排查建议：",
             "1. 端口被其他 Ricca 窗口占用：先退出旧窗口，再点“重试 Socket”；不要重复启动。",
             "2. 选择手机同一局域网的 Wi-Fi / 以太网 IPv4；VPN / 虚拟网卡地址可能无法从手机访问。",
-            "3. 切换地址后重新扫码，手机选择 DG-LAB 3.0 的 Socket 模式。127.0.0.1 只能在本机使用。",
+            ("3. 使用 DG-LAB 4 App 扫码后，在设备列表明确选择设备；App 在线不代表设备已就绪。"
+             if self.socketProtocol == "v4" else
+             "3. 切换地址后重新扫码，手机选择 DG-LAB 3.0 的 Socket 模式。127.0.0.1 只能在本机使用。"),
             f"4. 检查 Windows 防火墙是否允许本程序在专用网络入站 TCP {port}；此处不会自动改规则或关闭防火墙。",
             "5. 检查 VPN 的局域网访问/分流设置、Wi-Fi 访客隔离；本机监听正常不代表手机一定可达。",
         ])
@@ -1345,12 +2090,33 @@ class AppBackend(QObject):
             return False
         self.emergencyStop()
         self._bridge.stop()
+        self._v4_hub.stop()
+        if any(sender._thread is not None and sender._thread.is_alive()
+               for sender in (self._bridge, self._v4_hub)):
+            return False
+        self._discard_old_bridge_events(all_routes=True)
+        # A route's stop() releases only its selection; an explicit full retry
+        # must replace the shared server and both role adapters together.
+        self._v4_hub = DGLabV4Hub(self._queue, lan_ip=self._lan_ip)
+        self._ovc_bridge = self._v4_hub.channel("ovc")
+        self._bridge = self._make_bridge()
+        self._pulse_requested_selection = None
+        self._ovc_requested_selection = None
+        self._bridge.latch_global_emergency_stop()
+        self._v4_hub.latch_global_emergency_stop()
+        self._v4_devices = []
+        self._v4_qr_url = self._v4_qr_source = self._v4_error = ""
+        self._ovc_connected = False
+        self._ovc_route_paused = True
+        self._ovc_pipeline.stop()
+        self._ovc_plan = OvcOutputPlan(reason="socket-restart")
+        self._ovc_status = "负鼠未连接"
         self._server_ready = self._device_connected = False
         self._server_error = self._qr_url = self._qr_source = ""
-        self._bridge.server_ready = self._bridge.connected = False
-        self._bridge.controller_id = self._bridge.target_id = ""
         self._bridge_status = "正在重新启动 Socket…"
         self._bridge.start()
+        self._v4_hub.start()
+        self.devicesChanged.emit()
         self.changed.emit()
         return True
 
@@ -1358,6 +2124,8 @@ class AppBackend(QObject):
     def emergencyStop(self) -> None:
         # A connection or settings refresh must never undo an emergency stop.
         self._stop_latched = True
+        for playback in self._manual_playback.values():
+            playback.stop("emergency-stop")
         self._priority_output_active = False
         self._priority_kind = ""
         self._death_penalty.cancel()
@@ -1367,11 +2135,20 @@ class AppBackend(QObject):
         self._manual_test_channel = ""
         self._tested_channels.clear()
         self._bridge.emergency_stop()
+        self._v4_hub.latch_global_emergency_stop()
+        self._ovc_pipeline.stop()
+        self._ovc_plan = OvcOutputPlan(reason="emergency-stop")
+        self._ovc_status = "负鼠已紧急停止"
         self._mapping.clear_pulses()
         self._defeat_scene.cancel_pulses()
         self._bridge_status = "紧急停止：A/B 已归零并清空队列"
         self._append_system_event("紧急归零", "自动输出已撤销，A/B 队列已清空", "danger")
         self.changed.emit()
+
+    def latchAllOutputs(self) -> None:
+        # Runs synchronously on the hotkey thread; never wait for the Qt loop.
+        self._bridge.latch_global_emergency_stop()
+        self._v4_hub.latch_global_emergency_stop()
 
     @Property(str, notify=changed)
     def emergencyHotkey(self) -> str:
@@ -1512,7 +2289,7 @@ class AppBackend(QObject):
             return False
         previous = deepcopy(self._config.values)
         try:
-            self._config.update({
+            self._update_profile({
                 "strength_low": low,
                 "strength_medium": medium,
                 "strength_high": high,
@@ -1586,7 +2363,7 @@ class AppBackend(QObject):
     @Slot(str, bool, str, str, result=bool)
     def setEventMapping(self, key: str, enabled: bool, tier: str, wave: str) -> bool:
         rules = {name: dict(value) for name, value in
-                 (self._config.values.get("event_rules") or {}).items()}
+                 (self._profile_values().get("event_rules") or {}).items()}
         if key not in rules or tier not in {"low", "medium", "high", "death"}:
             return False
         available = {item["key"] for item in self._wave_catalog()}
@@ -1597,7 +2374,7 @@ class AppBackend(QObject):
         for policy in policies.values():
             policy["rules"][key].update({"enabled": bool(enabled), "tier": tier, "wave": wave, "custom_strength": None})
         try:
-            self._config.update({"event_rules": rules, "channel_policies": policies})
+            self._update_profile({"event_rules": rules, "channel_policies": policies})
         except OSError as error:
             self._append_system_event("事件映射保存失败", str(error), "danger")
             return False
@@ -1613,7 +2390,7 @@ class AppBackend(QObject):
         if wave not in available:
             return False
         rules = {name: dict(value) for name, value in
-                 (self._config.values.get("event_rules") or {}).items()}
+                 (self._profile_values().get("event_rules") or {}).items()}
         for rule in rules.values():
             rule["wave"] = wave
         policies = sanitize_channel_policies(self.channelPolicies)
@@ -1621,7 +2398,7 @@ class AppBackend(QObject):
             for rule in policy["rules"].values():
                 rule["wave"] = wave
         try:
-            self._config.update({"event_rules": rules, "channel_policies": policies})
+            self._update_profile({"event_rules": rules, "channel_policies": policies})
         except OSError as error:
             self._append_system_event("固定波形保存失败", str(error), "danger")
             return False
@@ -1634,8 +2411,12 @@ class AppBackend(QObject):
     @Slot(result=bool)
     def resetEventMappings(self) -> bool:
         rules = {key: dict(value) for key, value in DEFAULT_EVENT_RULES.items()}
+        policies = default_channel_policies()
+        if self.outputProfile == "ovc":
+            defaults = ovc.default_ovc_profile()
+            rules, policies = defaults["event_rules"], defaults["channel_policies"]
         try:
-            self._config.update({"event_rules": rules, "channel_policies": default_channel_policies()})
+            self._update_profile({"event_rules": rules, "channel_policies": policies})
         except OSError as error:
             self._append_system_event("恢复默认映射失败", str(error), "danger")
             return False
@@ -1656,6 +2437,9 @@ class AppBackend(QObject):
 
     @Slot(str, "QVariantList", int, result=bool)
     def saveCustomWaveform(self, name: str, points: list, frequency: int) -> bool:
+        if self.outputProfile == "ovc":
+            self.toastRequested.emit("未保存", "负鼠当前使用独立官方波形库，不会写入郊狼自定义波形。")
+            return False
         try:
             target = save_custom_waveform(name, list(points), frequency)
         except (OSError, ValueError, TypeError) as error:
@@ -1703,7 +2487,7 @@ class AppBackend(QObject):
         self._bridge.set_auto_enabled(False)
         ok = self._bridge.manual_test(
             min(5, self.hardCap),
-            frames_for("tap"),
+            self._frames_for("ovc_pinpoint" if self.outputProfile == "ovc" else "tap"),
             hard_cap=min(10, self.hardCap),
             channel=clean_channel,
         )
@@ -1740,7 +2524,9 @@ class AppBackend(QObject):
 
     def _sync_auto_output(self) -> bool:
         """Connection is sufficient; scene/read gates still govern every frame."""
-        armed = bool(not self._demo and self._device_connected
+        armed = bool(not self._manual_playback["coyote"].enabled and not self._demo and self._device_connected
+                     and not self._pulse_route_paused
+                     and self._profile_matches_device()
                      and self.onboardingCompleted and self.hardCap > 0
                      and not self._onboarding_active
                      and not self._stop_latched
@@ -1758,7 +2544,8 @@ class AppBackend(QObject):
     def _disarm_output(self, reason: str, *, log: bool = False, preserve_defeat: bool = False) -> None:
         was_armed = self._output_armed
         self._output_armed = False
-        self._bridge.set_auto_enabled(False)
+        if not self._manual_playback["coyote"].enabled:
+            self._bridge.set_auto_enabled(False)
         self._mapping.clear_pulses()
         if not preserve_defeat:
             self._defeat_scene.cancel_pulses()
@@ -1810,8 +2597,9 @@ class AppBackend(QObject):
         self._audio_worker.start()
 
     def _apply_audio_sample(self, payload: dict[str, Any]) -> None:
+        policies = list(self.channelPolicies.values()) + list(self._ovc_pipeline.policies.values())
         hybrid_story = (any(story_mode(p) in {"audio", "fixed_audio", "queue_audio"}
-                            and p["mode"] != "off" for p in self.channelPolicies.values())
+                            and p["mode"] != "off" for p in policies)
                         and self._defeat_story_allowed() and not self._user_output_paused
                         and not (self._state.get("game_ui") or {}).get("is_user_pause"))
         if ((self._pause_active and not hybrid_story)
@@ -1894,6 +2682,11 @@ class AppBackend(QObject):
                          death_detected=death_detected, not_triggered_reasons=missing_edge_reasons)
         allow_gameplay = self._decision.allow_gameplay_output and not self._pause_active
         self._mapping.reconcile_capture(state, allow_output=allow_gameplay, now=now)
+        self._ovc_pipeline.observe(state, detected, self._decision, now=now,
+            registered_scenes=self._config.values["scene_catalog"],
+            blocked_scenes=set(self._scene_library.entries) - set(self._config.values["scene_catalog"]),
+            allow_output=self._ovc_eligible(), user_paused=self._user_output_paused,
+            emergency_stop=self._stop_latched, story_allowed=self._defeat_story_allowed())
         cg_changes = self._defeat_scene.observe(
             state, now=now, allow_story=self._defeat_story_allowed(),
             paused=self._stop_latched,
@@ -1974,8 +2767,88 @@ class AppBackend(QObject):
         self.rawJsonChanged.emit()
 
     def _apply_bridge(self, payload: dict[str, Any]) -> None:
+        # Any loss of readiness cancels a manual session, even if a reconnect
+        # event arrives in the same GUI drain. Never resume it automatically.
+        if payload.get("event") in {"waiting", "disconnected", "error", "server_error", "output_timeout"}:
+            role = payload.get("role")
+            targets = ("coyote", "ovc") if role == "hub" else ("ovc",) if role == "ovc" else ("coyote",)
+            for device in targets:
+                self._manual_playback[device].stop("manual-device-lost")
         event = payload.get("event")
-        if event == "ready":
+        role = payload.get("role", "coyote")
+        if event == "devices":
+            # Only the shared catalog drives the two stable device lists.
+            if role in {"hub", "coyote"}:
+                previous_devices = self._v4_devices
+                old_identity = [(d.get("clientId"), d.get("slotId"), d.get("type"), d.get("name")) for d in self._v4_devices]
+                self._v4_devices = [{**item, "label": f"{item.get('name') or item.get('type')} · {item.get('type')}"}
+                                    for item in payload.get("devices", [])]
+                new_identity = [(d.get("clientId"), d.get("slotId"), d.get("type"), d.get("name")) for d in self._v4_devices]
+                if (self._pulse_requested_selection and self._pulse_requested_selection[1]
+                        and not any((item.get("clientId"), item.get("slotId")) == self._pulse_requested_selection
+                                    for item in self.v4Devices)):
+                    self._pulse_requested_selection = None
+                if old_identity != new_identity:
+                    self.devicesChanged.emit()
+                if (self._ovc_requested_selection and self._ovc_requested_selection[1]
+                        and not any((item.get("clientId"), item.get("slotId")) == self._ovc_requested_selection
+                                    for item in self.ovcDevices)):
+                    self._ovc_requested_selection = None
+                self._auto_select_new_v4_devices(previous_devices)
+                if self.pulseDeviceWaiting:
+                    self._bridge_status = self.pulseWaitingHint
+            return
+        if role == "hub":
+            if event == "ready":
+                self._v4_error = ""
+                self._v4_qr_url = str(payload.get("qr_url", ""))
+                self._v4_qr_source = _qr_data_url(self._v4_qr_url)
+                if self.socketProtocol != "v4":
+                    return
+            elif event in {"server_error", "error"}:
+                self._v4_error = str(payload.get("detail", ""))
+                self._v4_qr_url = self._v4_qr_source = ""
+                self._ovc_connected = False
+                self._ovc_pipeline.stop()
+                self._ovc_status = self._v4_error
+                if self.socketProtocol != "v4":
+                    return
+            elif event == "app_connected":
+                self._ovc_status = "App 在线 · 请选择负鼠设备"
+                if self.socketProtocol != "v4":
+                    return
+            else:
+                return
+        elif role == "ovc":
+            event_route = (payload.get("target_id"), payload.get("slot_id"))
+            if (self._ovc_requested_selection is not None and all(event_route)
+                    and event_route != self._ovc_requested_selection):
+                return
+            if event == "connected":
+                self._ovc_requested_selection = None
+                self._ovc_connected = True
+                self._ovc_pipeline.clear_pulses()
+                self._ovc_status = "负鼠已就绪 · 单独启用振动，不影响 Pulse"
+            elif event in {"waiting", "disconnected", "error", "output_timeout", "server_error"}:
+                self._ovc_connected = False
+                self._ovc_route_paused = True
+                self._ovc_pipeline.stop()
+                self._ovc_plan = OvcOutputPlan(reason=str(payload.get("reason", event)))
+                self._ovc_status = str(payload.get("detail") or "负鼠已断开或未就绪")
+            return
+        elif payload.get("protocol") == "v4" and self.socketProtocol != "v4":
+            return  # Late electrical route events after switching to V3.
+        if self.socketProtocol == "v4" and event in {"connected", "waiting", "disconnected"}:
+            event_route = (payload.get("target_id"), payload.get("slot_id"))
+            if (self._pulse_requested_selection is not None and all(event_route)
+                    and event_route != self._pulse_requested_selection):
+                return  # Do not overwrite a newer accepted choice with an old route event.
+        if event == "devices":
+            self._v4_devices = [{**item, "label": f"{item.get('name') or item.get('type')} · {item.get('type')}"}
+                                for item in payload.get("devices", [])]
+        elif event == "app_connected":
+            self._bridge_status = "DG-LAB 4 App 已连接 · 请选择输出设备"
+        elif event == "ready":
             self._server_ready = True
             self._server_error = ""
             self._lan_ip = str(payload.get("lan_ip", self._lan_ip))
@@ -1983,21 +2856,30 @@ class AppBackend(QObject):
             self._qr_source = _qr_data_url(self._qr_url)
             self._bridge_status = f"Socket 已就绪 · {self._lan_ip}:{payload.get('port', 9999)}"
         elif event == "connected":
+            self._pulse_requested_selection = None
             self._device_connected = True
             self._output_armed = False
             self._mapping.clear_pulses()
             self._defeat_scene.cancel_pulses()
             self._death_penalty.cancel()
-            self._detector.pending_damage = None
             self._tested_channels.clear()
             self._manual_test_channel = ""
             self._sync_auto_output()
-            self._bridge_status = "DG-LAB App 已连接 · 按游戏状态自动输出（受硬上限约束）"
+            self._bridge_status = ("设备已就绪 · 核对独立配置后手动恢复输出" if self.socketProtocol == "v4" else
+                                   "DG-LAB App 已连接 · 按游戏状态自动输出（受硬上限约束）")
             self._append_system_event("DG-LAB 已连接", self.outputStatus, "success")
+        elif event == "waiting":
+            # The App still owns this slot, but its state is not safe for
+            # electrical output. Retain the choice without changing OVC.
+            self._device_connected = False
+            self._pulse_route_paused = True
+            self._disarm_output("等待设备就绪")
+            self._sync_output_pause()
+            self._bridge_status = self.pulseWaitingHint
         elif event == "disconnected":
+            self._pulse_requested_selection = None
             self._device_connected = False
             self._disarm_output("设备断开")
-            self._detector.pending_damage = None
             self._tested_channels.clear()
             self._manual_test_channel = ""
             self._bridge_status = "DG-LAB App 已断开"
@@ -2021,13 +2903,11 @@ class AppBackend(QObject):
                 f"{channel} 通道测试完成", "强度已归零，队列已清空", "success"
             )
         elif event in {"error", "server_error"}:
-            self._stop_latched = True
-            self._priority_output_active = False
-            self._death_penalty.cancel()
-            self._defeat_scene.cancel_pulses()
-            self._user_output_paused = True
+            # A Pulse route failure must not revoke a healthy OVC route.
+            self._pulse_route_paused = True
+            self._bridge.emergency_stop()
+            self._disarm_output("Socket 错误")
             self._sync_output_pause()
-            self._output_armed = False
             self._bridge_status = str(payload.get("detail", "Socket 错误"))
             if event == "server_error":
                 self._server_ready = self._device_connected = False
@@ -2035,11 +2915,8 @@ class AppBackend(QObject):
                 self._qr_url = self._qr_source = ""
             self._append_system_event("Socket 错误", self._bridge_status, "danger")
         elif event == "output_timeout":
-            self._stop_latched = True
-            self._priority_output_active = False
-            self._death_penalty.cancel()
-            self._defeat_scene.cancel_pulses()
-            self._user_output_paused = True
+            self._pulse_route_paused = True
+            self._bridge.emergency_stop()
             self._sync_output_pause()
             self._disarm_output("设备发送看门狗超时", log=True)
 
@@ -2063,6 +2940,7 @@ class AppBackend(QObject):
                 self._mapping.stop_capture_pulses()
                 self._detector.reset()
                 self._defeat_scene.interrupt(time.monotonic())
+                self._ovc_pipeline.stop()
             elif kind == "dglab":
                 self._apply_bridge(payload)
             elif kind == "audio_sample":
@@ -2073,6 +2951,7 @@ class AppBackend(QObject):
         expired = self._detector.tick(now)
         if expired:
             self._mapping.accept(expired, allow_output=self._decision.allow_gameplay_output and self.telemetryOnline and not self._pause_active)
+            self._ovc_pipeline.accept_events(expired, allow_output=self._ovc_eligible())
             for event in expired:
                 self._events.appendleft(event.as_dict())
             self.eventsChanged.emit()
@@ -2102,7 +2981,7 @@ class AppBackend(QObject):
                             or (self._state.get("game_ui") or {}).get("is_user_pause")),
         )
         death = self._death_penalty.preview(self._state, self._strength_settings(), self.hardCap, now=now)
-        eligible = bool(not self._demo and not self._stop_latched
+        eligible = bool(not self._manual_playback["coyote"].enabled and not self._demo and not self._stop_latched and not self._pulse_route_paused and self._profile_matches_device()
             and not self._onboarding_active and self.onboardingCompleted and self.hardCap > 0
             and self._device_connected and self.telemetryOnline and not self._reader_error
             and self._state.get("build_supported") is True)
@@ -2158,7 +3037,7 @@ class AppBackend(QObject):
                              and selected["base_strength"] > 0 else 0)
                     selected["minimum_strength"] = floor
                     selected["strength"] = min(self.hardCap, max(floor, selected["strength"]))
-                missing = selected["wave"] not in {"idle", "audio-reactive"} and not frames_for(selected["wave"], self._custom_waveforms)
+                missing = selected["wave"] not in {"idle", "audio-reactive"} and not self._frames_for(selected["wave"])
                 if missing or selected["wave"] == "idle":
                     selected["strength"] = 0
                 selected.update(playing=bool(active), enabled=channel in queue_channels, missing_wave=bool(missing))
@@ -2208,6 +3087,7 @@ class AppBackend(QObject):
                           self._death_penalty.sequence, wave_a, wave_b)
         if gate_signature != self._last_output_audit or now - self._last_output_audit_at >= 10:
             audit.record("output.gate", allowed=output_safe, blockers=reasons,
+                         output_profile=self.outputProfile, socket_protocol=self.socketProtocol,
                          scene_root=scene_root((self._state.get("story") or {}).get("asset_name")),
                          scene_registered=scene_root((self._state.get("story") or {}).get("asset_name")) in self._config.values["scene_catalog"],
                          scene_catalog_count=self.registeredSceneCount,
@@ -2225,12 +3105,14 @@ class AppBackend(QObject):
         if (priority_active, priority_kind) != (self._priority_output_active, self._priority_kind):
             self._priority_output_active, self._priority_kind = priority_active, priority_kind
             changed = True
-        self._bridge.set_paused(self._stop_latched or (self._pause_active and not priority_active))
+        if not self._manual_playback["coyote"].enabled:
+            self._bridge.set_paused(self._stop_latched or self._pulse_route_paused or (self._pause_active and not priority_active))
         if output_safe:
             def output_frames(wave_key: str) -> tuple[str, ...]:
                 if wave_key == "audio-reactive":
-                    return custom_frames(self._audio_points, 80)
-                return frames_for(wave_key, self._custom_waveforms)
+                    return (tuple("0A0A0A0A" + f"{max(0, min(100, int(value))):02X}" * 4 for value in self._audio_points)
+                            if self.outputProfile == "ovc" else custom_frames(self._audio_points, 80))
+                return self._frames_for(wave_key)
 
             self._bridge.update_auto_outputs(
                 strength_a,
@@ -2241,7 +3123,11 @@ class AppBackend(QObject):
                 wave_key_b=wave_b if wave_b == "audio-reactive" else wave_b + ":" + (self._death_penalty.token("B") if death_b else self._defeat_scene.token("B") + self._story_queue_tokens["B"] if cg_b else self._mapping.pulse_token("B")),
                 hard_cap=self.hardCap,
             )
-        self._bridge.set_auto_enabled(output_safe)
+        if self._manual_playback["coyote"].enabled:
+            changed = self._sync_manual_output("coyote", now) or changed
+        else:
+            self._bridge.set_auto_enabled(output_safe)
+        changed = self._sync_ovc_output(now) or changed
         if changed:
             self.changed.emit()
 
@@ -2253,6 +3139,8 @@ class AppBackend(QObject):
             (not self.onboardingCompleted, "onboarding-incomplete"),
             (self.hardCap <= 0, "hard-cap-zero"),
             (not self._device_connected, "phone-not-bound"),
+            (not self._profile_matches_device(), "device-profile-mismatch"),
+            (self._pulse_route_paused, "pulse-route-paused"),
             (not self.telemetryOnline, "telemetry-stale-or-offline"),
             (bool(self._reader_error), "read-error"),
             (self._state.get("build_supported") is not True, "unsupported-build"),
@@ -2275,6 +3163,7 @@ class AppBackend(QObject):
         self._stop.set()
         self._bridge.emergency_stop()
         self._bridge.stop()
+        self._v4_hub.stop()
         self._stop_audio_capture()
         if self._hotkey_service is not None:
             self._hotkey_service.close()

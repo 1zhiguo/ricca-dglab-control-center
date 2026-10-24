@@ -16,6 +16,7 @@ Dialog {
     property string battleFilter: "all"
     property string selectedMode: "hp"
     property string selectedStoryMode: "fixed"
+    property string focusedRuleKey: ""
     readonly property var storyModes: [
         {key:"fixed",name:"固定波形"}, {key:"queue",name:"循环队列"},
         {key:"audio",name:"实时音频"}, {key:"fixed_audio",name:"固定＋音频"},
@@ -32,8 +33,8 @@ Dialog {
     property string errorText: ""
     parent: Overlay.overlay
     anchors.centerIn: parent
-    width: Math.min(1100, parent.width - 48)
-    height: Math.min(790, parent.height - 40)
+    width: Math.min(focusedRuleKey !== "" ? 900 : 1100, parent.width - 48)
+    height: Math.min(focusedRuleKey !== "" ? 400 : 790, parent.height - 40)
     modal: true
     padding: 0
     closePolicy: Popup.CloseOnEscape
@@ -55,6 +56,7 @@ Dialog {
         var order = ["player_down","damage_light","damage_medium","damage_heavy","struggle","hit_small","hit_normal","heavy_land","wall_bounce","armor_break","boss_catch"]
         for (var i=0; i<order.length; ++i) {
             var key = order[i]
+            if (focusedRuleKey !== "" && focusedRuleKey !== key) continue
             var hp = key.indexOf("damage_") === 0
             var cg = key.indexOf("defeat_") === 0 || key === "player_down"
             var group = key === "player_down" || key === "armor_break" ? "penalty" : hp ? "hp" : "action"
@@ -71,6 +73,7 @@ Dialog {
         ruleScroll.contentItem.contentY = 0
     }
     function openChannel(value) {
+        focusedRuleKey = ""
         channel = value
         category = "battle"
         battleFilter = "all"
@@ -94,15 +97,22 @@ Dialog {
         storyScroll.contentItem.contentY = 0
         open()
     }
+    function openEvent(value, key) {
+        openChannel(value)
+        focusedRuleKey = key
+        refreshRows()
+    }
     function save() {
-        if (lightMax.value >= mediumMax.value) {
-            errorText = "中伤害上限必须大于小伤害上限。"
-            return false
+        if (focusedRuleKey === "") {
+            if (lightMax.value >= mediumMax.value) {
+                errorText = "中伤害上限必须大于小伤害上限。"
+                return false
+            }
+            draft.mode = selectedMode
+            draft.story_mode = selectedStoryMode
+            draft.damage_light_max = lightMax.value / 100
+            draft.damage_medium_max = mediumMax.value / 100
         }
-        draft.mode = selectedMode
-        draft.story_mode = selectedStoryMode
-        draft.damage_light_max = lightMax.value / 100
-        draft.damage_medium_max = mediumMax.value / 100
         if (controller.saveChannelPolicy(channel, draft)) { close(); return true }
         errorText = "保存失败，请查看诊断与事件。"
         return false
@@ -157,6 +167,7 @@ Dialog {
     }
     component ValueSlider: Slider {
         id: valueSlider
+        snapMode: dialog.controller.outputProfile === "ovc" ? Slider.SnapAlways : Slider.NoSnap
         implicitHeight: 30
         background: Rectangle { x: valueSlider.leftPadding; y: valueSlider.topPadding + valueSlider.availableHeight/2 - height/2; width: valueSlider.availableWidth; height: 5; radius: 3; color: "#5c5038"
             Rectangle { width: parent.width * valueSlider.visualPosition; height: parent.height; radius: 3; color: dialog.accent }
@@ -197,7 +208,8 @@ Dialog {
         required property var modelData
         property var rule: modelData.rule
         property string strengthMode: rule.custom_strength != null ? "custom" : rule.tier
-        property real customValue: rule.custom_strength == null ? dialog.controller[rule.tier + "Strength"] : rule.custom_strength
+        property real rawCustomValue: rule.custom_strength == null ? dialog.controller[rule.tier + "Strength"] : rule.custom_strength
+        property real customValue: dialog.controller.outputProfile === "ovc" ? Math.floor(rawCustomValue/10)*10 : rawCustomValue
         property real durationValue: rule.duration == null ? 0.1 : rule.duration
         readonly property bool sustained: key === "struggle" || key === "defeat_interaction"
         property string key: modelData.key
@@ -209,7 +221,18 @@ Dialog {
         ColumnLayout {
             anchors.fill: parent; anchors.margins: 12; spacing: 6
             RowLayout { Layout.fillWidth: true; spacing: 10
-                Switch { checked: row.rule.enabled; onToggled: dialog.setRule(row.key, "enabled", checked) }
+                Switch {
+                    id: feedbackToggle
+                    implicitWidth:48; implicitHeight:30
+                    checked:row.rule.enabled
+                    onToggled:dialog.setRule(row.key,"enabled",checked)
+                    indicator:Rectangle {
+                        implicitWidth:44; implicitHeight:24; y:(feedbackToggle.height-height)/2; radius:12
+                        color:feedbackToggle.checked ? "#8fbd83" : "#574a36"
+                        border.color:feedbackToggle.checked ? "#a6d29a" : "#75674d"
+                        Rectangle { width:18;height:18;radius:9;y:3;x:feedbackToggle.checked ? 23 : 3;color:"#f3ecd9" }
+                    }
+                }
                 Label { sourceText: row.modelData.cg ? (row.key === "player_down" ? "死亡惩罚" : "CG · 剧情输出") : (row.modelData.hp ? "HP · " : "动作 · ") + row.rule.label; font.bold: true; Layout.preferredWidth: 176 }
                 Choice {
                     Layout.preferredWidth: 145; model: dialog.tiers; textRole: "name"; valueRole: "key"
@@ -256,7 +279,7 @@ Dialog {
                 visible: row.strengthMode === "custom" && !(row.key === "defeat_interaction" && (dialog.selectedStoryMode === "queue" || dialog.selectedStoryMode === "queue_audio" || dialog.selectedStoryMode === "off"))
                 Layout.fillWidth: true
                 Label { sourceText: "自定义强度"; color: "#aaa68d"; Layout.preferredWidth: 95; font.pixelSize: 11 }
-                ValueSlider { id: strengthSlider; objectName: row.key + "CustomStrength"; Layout.fillWidth: true; from: 0; to: 100; stepSize: 1; value: row.customValue; onMoved: { row.customValue = Math.round(value); dialog.setRule(row.key,"custom_strength",row.customValue) } }
+                ValueSlider { id: strengthSlider; objectName: row.key + "CustomStrength"; Layout.fillWidth: true; from: 0; to: dialog.controller.outputProfile === "ovc" ? 200 : 100; stepSize: dialog.controller.outputProfile === "ovc" ? 10 : 1; value: row.customValue; onMoved: { row.customValue = Math.round(value); dialog.setRule(row.key,"custom_strength",row.customValue) } }
                 Label { sourceText: Math.round(strengthSlider.value); color: dialog.accent; Layout.preferredWidth: 48 }
             }
             RowLayout { Layout.fillWidth: true; spacing: 14
@@ -277,12 +300,13 @@ Dialog {
         Item {
             Layout.fillWidth: true; Layout.preferredHeight: 54
             ColumnLayout { anchors.left: parent.left; anchors.right: cancelButton.left; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter; spacing: 3
-                Label { sourceText: dialog.channel + " 通道策略"; font.pixelSize: 23; font.bold: true; color: dialog.accent }
+                Label { sourceText: dialog.focusedRuleKey !== "" && dialog.draft.rules ? dialog.draft.rules[dialog.focusedRuleKey].label : dialog.controller.outputProfile === "ovc" ? (dialog.channel === "A" ? "负鼠 A 通道策略" : "负鼠 B 通道策略") : dialog.channel + " 通道策略"; font.pixelSize: 23; font.bold: true; color: dialog.accent }
                 Label { sourceText: "独立配置 · 重叠时较强者接管，同强度刷新时长，较弱者忽略"; color: "#aaa68d"; font.pixelSize: 11 }
             }
             ActionButton { id: cancelButton; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; text: "取消"; onClicked: dialog.close() }
         }
         RowLayout {
+            visible:dialog.focusedRuleKey === ""
             Layout.fillWidth: true; spacing: 12
             Repeater {
                 model: [{key:"battle",name:"战斗反馈",object:"strategyBattleTab"}, {key:"story",name:"剧情 / 鉴赏",object:"strategyStoryTab"}]
@@ -296,7 +320,7 @@ Dialog {
             }
         }
         RowLayout {
-            visible:dialog.category === "battle"
+            visible:dialog.category === "battle" && dialog.focusedRuleKey === ""
             Layout.fillWidth: true; spacing: 14
             Label { sourceText: "战斗来源"; font.bold: true }
             Choice {
@@ -308,7 +332,7 @@ Dialog {
             Label { Layout.fillWidth: true; wrapMode: Text.WordWrap; sourceText: dialog.selectedMode === "off" ? "此通道整体关闭，包括剧情和死亡惩罚。" : dialog.selectedMode === "none" ? "不接收 HP、动作或捕获事件；剧情输出与死亡惩罚仍按独立设置执行。" : "仅设置战斗来源；剧情 / 鉴赏请切换顶部分类。HP 与动作重叠只取较强者，不叠加强度。"; color: "#aaa68d"; font.pixelSize: 10 }
         }
         Rectangle {
-            visible: dialog.category === "battle" && (dialog.battleFilter === "all" || dialog.battleFilter === "hp") && (dialog.selectedMode === "hp" || dialog.selectedMode === "both")
+            visible: dialog.focusedRuleKey === "" && dialog.category === "battle" && (dialog.battleFilter === "all" || dialog.battleFilter === "hp") && (dialog.selectedMode === "hp" || dialog.selectedMode === "both")
             Layout.fillWidth: true; Layout.preferredHeight: 88; color: "#142017"; radius: 12; border.color: "#574a36"
             ColumnLayout { anchors.fill: parent; anchors.margins: 12; spacing: 7
                 RowLayout { spacing: 12; Label { sourceText: "小伤害 ≤" } HpInput { id: lightMax } Label { sourceText: "HP"; color: "#aaa68d" } Label { sourceText: "中伤害 ≤" } HpInput { id: mediumMax } Label { sourceText: "HP · 超出为重伤害"; color: "#aaa68d" } }
@@ -326,7 +350,7 @@ Dialog {
             }
         }
         RowLayout {
-            visible:dialog.category === "battle" && dialog.selectedMode !== "off"
+            visible:dialog.category === "battle" && dialog.selectedMode !== "off" && dialog.focusedRuleKey === ""
             Layout.fillWidth:true; spacing:10
             Label { sourceText:"事件筛选"; color:"#aaa68d"; Layout.preferredWidth:70 }
             Repeater {
@@ -390,8 +414,8 @@ Dialog {
         }
         Label { visible: dialog.errorText !== ""; sourceText: dialog.errorText; color: "#ff5d7a" }
         RowLayout { Layout.fillWidth: true
-            Label { Layout.fillWidth: true; sourceText: "档位跟随个性化范围 · 当前硬上限 " + dialog.controller.hardCap + " · 保存后自动应用，保留手动暂停状态"; color: "#aaa68d"; font.pixelSize: 10 }
-            ActionButton { text: "保存 " + dialog.channel + " 通道策略"; implicitWidth: 190; onClicked: dialog.save() }
+            Label { Layout.fillWidth: true; wrapMode:Text.WordWrap; sourceText: "档位跟随强度设置 · 当前硬上限 " + dialog.controller.hardCap + " · 保存后应用，保留暂停状态"; color: "#aaa68d"; font.pixelSize: 10 }
+            ActionButton { objectName:"saveChannelStrategyButton"; text: dialog.focusedRuleKey !== "" ? "保存事件设置" : "保存 " + dialog.channel + " 通道策略"; implicitWidth: 190; onClicked: dialog.save() }
         }
     }
 }

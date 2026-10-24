@@ -6,7 +6,9 @@
 
 - Windows x64. Extract the full portable ZIP; keep `_internal` next to the EXE. Do not put the companion inside the game folder. Close the old app before upgrading.
 - The tutorial covers overview, pairing, intensity profiles, channel strategies, key recording and the final manually entered safety cap (0–100). A cap of 0 disables output.
-- In **Device & game**, select a LAN IPv4 reachable by your phone. Pair through DG-LAB 3.0 App's Socket mode. Use **Cannot connect?** for port, VPN, adapter and Wi-Fi isolation diagnostics.
+- In **Device & game**, select a phone-reachable LAN IPv4 and V3/V4, then scan using the matching App's Socket mode. **Cannot connect?** covers ports, VPN, adapters and Wi-Fi isolation.
+- For V4, check each device, accessory/mute state and cap before explicitly enabling Coyote/Opossum. Automatic selection never authorizes output. See [V4/Opossum setup (Chinese)](V4_TESTING.zh-CN.md).
+- The independent Opossum workbench stores vibration levels (0–200, steps of 10), official patterns and queues without changing Coyote settings. The sidebar Manual tab works without game detection but retains hardware, cap and emergency-stop checks; explicitly start playback.
 - Auto-detection looks for `HolyKnightRicca.exe`. If it fails, select the game EXE in the app. Its directory may contain Chinese or Japanese characters; the build fingerprint must still match.
 
 ## Output rules

@@ -76,7 +76,7 @@ def main() -> int:
     backend = AppBackend(reader, demo=args.demo, start_bridge=not args.no_socket)
     if not args.demo and not args.no_socket:
         from .hotkey import EmergencyHotkey
-        backend.attachHotkey(EmergencyHotkey(backend._bridge.latch_global_emergency_stop, backend))
+        backend.attachHotkey(EmergencyHotkey(backend.latchAllOutputs, backend))
     engine.rootContext().setContextProperty("backend", backend)
     qml_path = Path(__file__).resolve().parent / "qml" / "ControlCenter.qml"
     engine.load(QUrl.fromLocalFile(str(qml_path)))
@@ -92,7 +92,7 @@ def main() -> int:
     hud_controller = HudController(backend, hud_window)
     hud_window.setProperty("controller", hud_controller)
     app.aboutToQuit.connect(hud_controller.shutdown)
-    engine.rootObjects()[0].setProperty("pageIndex", max(0, min(7, args.page)))
+    engine.rootObjects()[0].setProperty("pageIndex", max(0, min(8, args.page)))
     if args.open_editor:
         engine.rootObjects()[0].setProperty("editorOnStart", True)
     if args.strategy:

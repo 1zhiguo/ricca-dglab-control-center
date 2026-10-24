@@ -1,5 +1,16 @@
 # Source publication and Firebase Hosting
 
+## 1.1.0 V4 / Opossum release
+
+Use a fresh `tools/build_release.py` build; never re-freeze an older version.
+Check independent Coyote/OVC routes, zero barriers, accessory/mute gates,
+manual control, HUD settings and unchanged existing user configuration.
+Capture fresh simulated screenshots with `tests/capture_release_screens.py`.
+Run all tests and portable smoke pages including both workbenches and manual.
+Publish tag v1.1.0 with the Windows ZIP, SHA-256 file and release metadata.
+Only link mirrors after their exact 1.1.0 files have been uploaded and verified.
+Release notes: [1.1.0](docs/RELEASE_1.1.0.md).
+
 ## 1.0.1 hotkey update
 
 Keep the frozen 1.0.0 ZIP/tag unchanged. 1.0.1 adds direct key-event recording,

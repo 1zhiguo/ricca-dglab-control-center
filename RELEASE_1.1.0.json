@@ -1,0 +1,17 @@
+{
+  "version": "1.1.0",
+  "filename": "Ricca-x-DGlab-1.1.0-windows-x64.zip",
+  "sha256": "65bfb5c47321dff4b849553e6add0b48c201363afc163aaa896075d0c36346be",
+  "bytes": 121639631,
+  "source_manifest_sha256": "ae39c0f12faf63a381e4e3eb7d49db06dd41c90b4e62379266752c2f626fc212",
+  "packaged_smoke_pages": [
+    0,
+    1,
+    3,
+    5,
+    6,
+    8,
+    9
+  ],
+  "signed": false
+}

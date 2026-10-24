@@ -51,6 +51,23 @@ ApplicationWindow {
         dark: root.bg
     }
     property int pageIndex: 0
+    readonly property bool sharedOutputPaused: backend.outputPaused && (!backend.ovcPlan.allowed || backend.ovcPlan.paused)
+    readonly property string outputStateLabel: {
+        if (backend.emergencyStopped) return "紧急停止"
+        if (backend.priorityOutputStatus !== "") return backend.priorityOutputStatus + " · 输出中"
+        if (backend.userOutputPaused) return "手动暂停"
+        if (backend.manualOutputs.coyote.running || backend.manualOutputs.ovc.running) return "手动播放中"
+        if ((backend.manualOutputs.coyote.enabled || backend.manualOutputs.ovc.enabled) && !backend.anyOutputArmed) return "手动模式待机"
+        if (!backend.anyDeviceConnected) return "等待设备连接"
+        if (!backend.telemetryReady) return "等待游戏就绪"
+        if (root.sharedOutputPaused) return "输出待机"
+        return "正在同步"
+    }
+    function openDeviceWorkbench(device, section) {
+        if(section === "manual") { root.pageIndex=9;return }
+        if (device === "ovc") { root.pageIndex=8; ovcWorkbench.showSection(section || "strength") }
+        else { root.pageIndex=3; pulseWorkbench.showSection(section || "strength") }
+    }
     property bool editorOnStart: false
     property string strategyOnStart: ""
     onStrategyOnStartChanged: {
@@ -133,6 +150,38 @@ ApplicationWindow {
         Rectangle { anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.leftMargin: 24; anchors.rightMargin: 24; height: 1; color: "#75674d"; opacity: .65 }
     }
 
+    component ConnectionCard: Card {
+        id: connectionCard
+        property int readiness: 0
+        property bool fault: false
+        property color accent: root.green
+        readonly property bool connectionReady: readiness === 2 && !fault
+        readonly property bool glowActive: connectionReady
+        readonly property color glowColor: fault ? root.red : connectionReady ? accent : readiness === 1 ? root.yellow : root.border
+        clip: false
+        border.width: connectionReady || fault ? 2 : 1
+        border.color: glowColor
+        color: connectionReady ? Qt.tint(root.panel, Qt.rgba(accent.r, accent.g, accent.b, .065)) : root.panel
+        Behavior on border.color { ColorAnimation { duration: 180 } }
+        Repeater {
+            // Layered outlines give a static glow without blur textures,
+            // continuous animation or work on the detection/output threads.
+            model: [{spread:7,alpha:.055},{spread:4,alpha:.10},{spread:2,alpha:.18}]
+            delegate: Rectangle {
+                required property var modelData
+                anchors.fill: parent
+                anchors.margins: -modelData.spread
+                radius: connectionCard.radius + modelData.spread
+                color: "transparent"
+                border.width: 2
+                border.color: connectionCard.glowColor
+                opacity: connectionCard.glowActive ? modelData.alpha : 0
+                z: -1
+                Behavior on opacity { NumberAnimation { duration: 180 } }
+            }
+        }
+    }
+
     component AppButton: Rectangle {
         id: appButton
         property string label: "按钮"
@@ -178,7 +227,7 @@ ApplicationWindow {
         property string glyph: "•"
         property bool selected: false
         flat: true
-        implicitHeight: 48
+        implicitHeight: root.height < 800 ? 40 : 48
         background: Rectangle {
             radius: 14
             color: parent.selected ? Qt.rgba(root.pink.r, root.pink.g, root.pink.b, .14) : (parent.hovered ? root.panel2 : "transparent")
@@ -516,9 +565,9 @@ ApplicationWindow {
             ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: 18
-                spacing: 8
+                spacing: root.height < 800 ? 6 : 8
                 RowLayout {
-                    Layout.fillWidth: true; Layout.bottomMargin: 24
+                    Layout.fillWidth: true; Layout.bottomMargin: root.height < 800 ? 12 : 24
                     Rectangle {
                         objectName: "riccaBrandAvatar"
                         width: 44; height: 44; radius: 10; color: "transparent"
@@ -546,24 +595,26 @@ ApplicationWindow {
                 }
                 NavButton { Layout.fillWidth: true; text: "实时总览"; glyph: "◈"; selected: root.pageIndex === 0; onClicked: root.pageIndex = 0 }
                 NavButton { Layout.fillWidth: true; text: "设备与游戏"; glyph: "⌁"; selected: root.pageIndex === 1; onClicked: root.pageIndex = 1 }
-                NavButton { Layout.fillWidth: true; text: "个性化范围"; glyph: "◫"; selected: root.pageIndex === 2; onClicked: root.pageIndex = 2 }
-                NavButton { Layout.fillWidth: true; text: "波形工作台"; glyph: "〰"; selected: root.pageIndex === 3; onClicked: root.pageIndex = 3 }
+                NavButton { Layout.fillWidth: true; text: "郊狼工作台"; glyph: "〰"; selected: root.pageIndex === 3 || root.pageIndex === 2; onClicked: root.pageIndex = 3 }
+                NavButton { objectName: "ovcWorkbenchNavButton"; Layout.fillWidth: true; text: "负鼠工作台"; glyph: "≋"; selected: root.pageIndex === 8; onClicked: root.pageIndex = 8 }
+                NavButton {objectName:"manualControlNavButton";Layout.fillWidth:true;text:"手动控制";glyph:"▷";selected:root.pageIndex===9;onClicked:root.pageIndex=9}
                 NavButton { Layout.fillWidth: true; text: "A/B 波形监视"; glyph: "◉"; selected: root.pageIndex === 4; onClicked: root.pageIndex = 4 }
                 Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; Layout.topMargin: 8; Layout.bottomMargin: 8; color: root.border }
-                NavButton { Layout.fillWidth: true; text: "剧情信号"; glyph: "◇"; selected: root.pageIndex === 5; onClicked: root.pageIndex = 5 }
+                NavButton { Layout.fillWidth: true; text: "场景与字幕"; glyph: "◇"; selected: root.pageIndex === 5; onClicked: root.pageIndex = 5 }
                 NavButton { Layout.fillWidth: true; text: "音频共感"; glyph: "◌"; selected: root.pageIndex === 6; onClicked: root.pageIndex = 6 }
                 NavButton { Layout.fillWidth: true; text: "诊断与事件"; glyph: "≡"; selected: root.pageIndex === 7; onClicked: root.pageIndex = 7 }
                 AppButton { objectName:"onboardingHelpButton"; Layout.fillWidth:true; Layout.preferredHeight:32; label:"新手教程"; labelColor:root.cyan; onClicked:onboarding.openGuide() }
                 Item { Layout.fillHeight: true }
                 Card {
+                    objectName: "sidebarStatusCard"
                     Layout.preferredWidth: 196; Layout.minimumWidth: 196; Layout.maximumWidth: 196
                     Layout.preferredHeight: 112
                     color: "#24291d"
                     ColumnLayout { anchors.fill: parent; anchors.margins: 13; spacing: 7
                         RowLayout { StatusDot { active: backend.telemetryOnline } AppText { sourceText: backend.telemetryStatus; font.pixelSize: 11; Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight } }
-                        RowLayout { StatusDot { active: backend.deviceConnected } AppText { sourceText: backend.deviceConnected ? "DG-LAB 已连接" : "等待手机连接"; font.pixelSize: 11; Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight } }
+                        RowLayout { StatusDot { active: backend.anyDeviceConnected } AppText { sourceText: backend.anyDeviceConnected ? "DG-LAB 已连接" : "等待手机连接"; font.pixelSize: 11; Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight } }
                         Rectangle { Layout.fillWidth: true; height: 1; color: root.border }
-                        AppText { sourceText: "v" + backend.version + "  ·  " + (backend.outputArmed ? backend.outputPaused ? "PAUSED" : "LIVE" : "SAFE"); color: backend.outputArmed && !backend.outputPaused ? root.red : root.yellow; font.pixelSize: 10; font.letterSpacing: 1 }
+                        AppText { sourceText: "v" + backend.version + "  ·  " + (backend.anyOutputArmed ? root.sharedOutputPaused ? "PAUSED" : "LIVE" : "SAFE"); color: backend.anyOutputArmed && !root.sharedOutputPaused ? root.red : root.yellow; font.pixelSize: 10; font.letterSpacing: 1 }
                     }
                 }
             }
@@ -577,8 +628,8 @@ ApplicationWindow {
                     anchors.left: parent.left; anchors.right: headerActions.left
                     anchors.leftMargin: 30; anchors.rightMargin: 24
                     anchors.verticalCenter: parent.verticalCenter; spacing: 2
-                    AppText { Layout.fillWidth: true; Layout.minimumWidth: 0; sourceText: ["实时总览", "设备与游戏", "个性化范围", "波形工作台", "A/B 波形监视", "剧情信号", "音频共感", "诊断与事件"][root.pageIndex]; font.pixelSize: 22; font.weight: Font.Bold; elide: Text.ElideRight }
-                    AppText { Layout.fillWidth: true; Layout.minimumWidth: 0; sourceText: ["游戏状态、角色与事件输出总览", "连接 Ricca 只读遥测并使用 DG-LAB 3.0 扫码", "设置共感档位与安全硬上限", "选择官方预设或创建自定义波形", "查看两个通道的当前波形和预览强度", "剧情信号与循环 Pulse 队列", "剧情队列决定波形，音量只调节强度；战斗不响应音频", "逐项核对指针、动作与触发边沿"][root.pageIndex]; color: root.muted; font.pixelSize: 11; elide: Text.ElideRight }
+                    AppText { Layout.fillWidth: true; Layout.minimumWidth: 0; sourceText: ["实时总览", "设备与游戏", "个性化范围", "郊狼工作台", "A/B 波形监视", "场景与字幕", "音频共感", "诊断与事件", "负鼠工作台", "手动控制"][root.pageIndex]; font.pixelSize: 22; font.weight: Font.Bold; elide: Text.ElideRight }
+                    AppText { Layout.fillWidth: true; Layout.minimumWidth: 0; sourceText: ["游戏状态、角色与事件输出总览", "启动游戏、扫码连接、选择设备", "设置共感档位与安全硬上限", "强度、战斗与剧情，按需调整", "查看两个通道的当前波形和预览强度", "查看剧情文字与已登记场景", "共用音频来源；各设备映射在工作台调整", "逐项核对指针、动作与触发边沿", "强度、战斗与剧情，按需调整", "独立调节 A/B 强度与波形，不依赖游戏检测"][root.pageIndex]; color: root.muted; font.pixelSize: 11; elide: Text.ElideRight }
                 }
                 RowLayout {
                     id: headerActions
@@ -600,20 +651,41 @@ ApplicationWindow {
                         border.color: backend.gameHudEnabled ? Qt.rgba(root.cyan.r,root.cyan.g,root.cyan.b,.5) : root.border
                         Row {
                             anchors.centerIn: parent; spacing: 7
-                            AppText { sourceText: "HUD"; color: backend.gameHudEnabled ? root.cyan : root.muted; font.pixelSize: 10; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
+                            AppText { sourceText: "HUD ⚙"; translateEnabled:false; color: backend.gameHudEnabled ? root.cyan : root.muted; font.pixelSize: 10; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
                             Rectangle {
                                 width: 30; height: 18; radius: 9; color: backend.gameHudEnabled ? root.cyan : "#514831"
                                 Rectangle { width: 12; height: 12; radius: 6; y: 3; x: backend.gameHudEnabled ? 15 : 3; color: backend.gameHudEnabled ? "#213b29" : "#ded3b7"; Behavior on x { NumberAnimation { duration: 150 } } }
+                                MouseArea {anchors.fill:parent;cursorShape:Qt.PointingHandCursor;onClicked:backend.setGameHudEnabled(!backend.gameHudEnabled)}
                             }
                         }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: backend.setGameHudEnabled(!backend.gameHudEnabled) }
+                        MouseArea { objectName:"openHudSettingsButton";anchors.left:parent.left;anchors.top:parent.top;anchors.bottom:parent.bottom;width:parent.width-36;cursorShape:Qt.PointingHandCursor;onClicked:hudSettings.openSettings() }
+                        HoverHandler { id:hudHelpHover }
+                        ToolTip.visible:hudHelpHover.hovered
+                        ToolTip.text:backend.localize("HUD 支持窗口和无边框全屏；独占全屏可能遮挡桌面悬浮窗。HUD 隐藏不代表设备停止输出。",backend.language)
                     }
-                    Rectangle { Layout.preferredWidth: 164; Layout.preferredHeight: 38; radius: 19; color: Qt.rgba((backend.outputArmed ? root.red : root.yellow).r, (backend.outputArmed ? root.red : root.yellow).g, (backend.outputArmed ? root.red : root.yellow).b, .10); border.color: Qt.rgba((backend.outputArmed ? root.red : root.yellow).r, (backend.outputArmed ? root.red : root.yellow).g, (backend.outputArmed ? root.red : root.yellow).b, .30); Row { anchors.centerIn: parent; spacing: 8; Rectangle { width: 8; height: 8; radius: 4; color: backend.outputArmed ? root.red : backend.deviceConnected ? root.green : root.yellow; anchors.verticalCenter: parent.verticalCenter } AppText { objectName: "outputStateBadge"; sourceText: backend.priorityOutputStatus !== "" ? backend.priorityOutputStatus + " · 输出中" : backend.userOutputPaused || (backend.outputArmed && backend.outputPaused) ? "输出已暂停" : backend.outputArmed ? "实时输出中" : backend.deviceConnected ? "设备已连接" : "等待设备连接"; color: backend.outputArmed ? root.red : backend.deviceConnected ? root.green : root.yellow; font.pixelSize: 10; font.bold: true } } }
-                    AppButton { objectName: "outputPauseButton"; Layout.preferredWidth: 92; Layout.preferredHeight: 38; label: backend.priorityOutputStatus === "死亡惩罚" ? (backend.userOutputPaused ? "恢复普通输出" : "暂停普通输出") : backend.userOutputPaused ? "恢复输出" : backend.outputArmed && backend.outputPaused ? "已暂停" : "暂停输出"; labelColor: backend.outputArmed && !backend.outputPaused ? root.red : root.yellow; onClicked: backend.toggleOutputPause() }
+                    Rectangle {
+                        Layout.preferredWidth:164; Layout.preferredHeight:38; radius:19
+                        readonly property color statusAccent: backend.emergencyStopped || backend.priorityOutputStatus !== "" ? root.red : root.sharedOutputPaused || !backend.anyDeviceConnected ? root.yellow : root.green
+                        color:Qt.rgba(statusAccent.r,statusAccent.g,statusAccent.b,.10)
+                        border.color:Qt.rgba(statusAccent.r,statusAccent.g,statusAccent.b,.30)
+                        Row { anchors.centerIn:parent; spacing:8
+                            Rectangle { width:8; height:8; radius:4; color:parent.parent.statusAccent; anchors.verticalCenter:parent.verticalCenter }
+                            AppText { objectName:"outputStateBadge"; sourceText:root.outputStateLabel; color:parent.parent.statusAccent; font.pixelSize:10; font.bold:true }
+                        }
+                        ToolTip.visible:statusHover.hovered
+                        ToolTip.text:backend.localize(backend.outputStatus,backend.language)
+                        HoverHandler { id:statusHover }
+                    }
+                    AppButton { objectName: "outputPauseButton"; Layout.preferredWidth: 92; Layout.preferredHeight: 38; label: backend.priorityOutputStatus === "死亡惩罚" ? (backend.userOutputPaused ? "恢复普通输出" : "暂停普通输出") : backend.userOutputPaused ? "恢复输出" : "暂停输出"; labelColor: backend.anyOutputArmed && !backend.userOutputPaused ? root.red : root.yellow; onClicked: backend.toggleOutputPause() }
                     AppButton { Layout.preferredWidth: 98; Layout.preferredHeight: 38; label: "紧急归零"; fillColor: Qt.rgba(root.red.r, root.red.g, root.red.b, .12); labelColor: root.red; onClicked: backend.emergencyStop() }
                 }
             }
 
+            RowLayout {
+                Layout.fillWidth: true; Layout.preferredHeight: 30; Layout.leftMargin: 30; Layout.rightMargin: 30; spacing: 12
+                AppText { objectName: "activeOutputProfile"; sourceText: "郊狼 Pulse＋负鼠振动，两台控制器可同时运行，强度与节奏独立保存"; color: root.cyan; font.pixelSize: 10; font.weight: Font.DemiBold; Layout.fillWidth: true; elide: Text.ElideRight }
+                AppButton { label: "连接设置"; Layout.preferredHeight: 26; Layout.preferredWidth: 104; onClicked: root.pageIndex = 1 }
+            }
             StackLayout {
                 currentIndex: root.pageIndex
                 Layout.fillWidth: true; Layout.fillHeight: true
@@ -745,99 +817,192 @@ ApplicationWindow {
 
                 ScrollView {
                     id: connectionPage
-                    clip: true; leftPadding: 16; rightPadding: 16; topPadding: 16; bottomPadding: 16
+                    property bool detailsExpanded: false
+                    property bool qrExpanded: false
+                    readonly property bool appConnected: backend.socketProtocol === "v4" ? backend.v4AppConnected : backend.deviceConnected
+                    readonly property bool showQr: !appConnected || qrExpanded
+                    readonly property int setupCardHeight: (showQr ? 292 : 260) + (backend.socketProtocol === "v3" ? 34 : 0)
+                    clip: true; leftPadding: 24; rightPadding: 24; topPadding: 18; bottomPadding: 24
                     contentWidth: availableWidth
-                    ColumnLayout { width: connectionPage.availableWidth; spacing: 16
-                        RowLayout { Layout.fillWidth: true; Layout.preferredHeight: root.width < 1240 ? 520 : 440; Layout.minimumHeight: Layout.preferredHeight; Layout.maximumHeight: Layout.preferredHeight; spacing: 16
-                            Card { Layout.fillWidth: true; Layout.fillHeight: true
-                                ColumnLayout { anchors.fill: parent; anchors.margins: 24; spacing: 14
+                    ColumnLayout { objectName: "deviceSetupRows"; width: connectionPage.availableWidth; spacing: 16
+                        RowLayout { objectName: "connectionSetupRow"; Layout.fillWidth: true; Layout.preferredHeight: connectionPage.setupCardHeight; Layout.minimumHeight: Layout.preferredHeight; Layout.maximumHeight: Layout.preferredHeight; spacing: 16
+                            ConnectionCard {
+                                objectName: "gameTelemetryCard"
+                                Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.fillHeight: true
+                                readiness: backend.telemetryReady ? 2 : backend.processId > 0 ? 1 : 0
+                                fault: backend.processId > 0 && backend.readerError !== ""
+                                accent: root.green
+                                ColumnLayout { anchors.fill: parent; anchors.margins: 18; spacing: 8
                                     RowLayout { Layout.fillWidth: true
-                                        AppText { sourceText: "Ricca 外部遥测"; font.pixelSize: 17; font.weight: Font.DemiBold; Layout.fillWidth: true }
-                                        AppText { sourceText: "自动连接"; color: root.muted; font.pixelSize: 10 }
+                                        AppText { sourceText: "1 · 打开游戏"; font.pixelSize: 17; font.weight: Font.DemiBold; Layout.fillWidth: true }
+                                        StatusDot { active: backend.telemetryReady }
                                     }
-                                    AppText { sourceText: "无需安装 BepInEx，不向游戏注入 DLL；控制中心只通过 ReadProcessMemory 读取已验证字段。"; color: root.muted; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                                     Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 44; radius: 12; color: "#142017"; border.color: root.border
                                         RowLayout { anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 14
-                                            StatusDot { active: backend.telemetryOnline }
-                                            AppText { sourceText: backend.telemetryStatus; Layout.fillWidth: true; font.weight: Font.DemiBold }
-                                            AppText { sourceText: backend.processId ? "PID " + backend.processId : "等待进程"; color: root.cyan; font.family: "Consolas" }
+                                            StatusDot { active: backend.telemetryReady }
+                                            AppText { sourceText: backend.telemetryReady ? "游戏已就绪" : "等待游戏就绪"; Layout.fillWidth: true; font.weight: Font.DemiBold }
                                         }
                                     }
-                                    AppText { sourceText: backend.telemetryOnline ? "游戏、场景、HP、动作与护甲遥测均已就绪" : "启动游戏并进入可操作场景后会自动绑定"; color: backend.telemetryOnline ? root.green : root.yellow; font.pixelSize: 10 }
+                                    AppText { sourceText: backend.telemetryReady ? "已自动检测，无需选择游戏目录。" : "启动 Ricca 并进入游戏，插件会自动检测。"; color: root.muted; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                                     RowLayout { Layout.fillWidth: true
-                                        Rectangle { Layout.fillWidth: true; height: 72; radius: 13; color: root.panel2
-                                            ColumnLayout { anchors.fill: parent; anchors.margins: 12; spacing: 4; AppText { sourceText: "当前章节"; color: root.muted; font.pixelSize: 9 } AppText { translateEnabled: false; sourceText: backend.stageName; font.pixelSize: 15; font.weight: Font.DemiBold } }
+                                        Rectangle { Layout.fillWidth: true; height: 58; radius: 11; color: root.panel2
+                                            ColumnLayout { anchors.fill: parent; anchors.margins: 10; spacing: 3; AppText { sourceText: "当前章节"; color: root.muted; font.pixelSize: 9 } AppText { Layout.fillWidth: true; translateEnabled: false; sourceText: backend.stageName; font.pixelSize: 12; font.weight: Font.DemiBold; elide: Text.ElideRight } }
                                         }
-                                        Rectangle { Layout.fillWidth: true; height: 72; radius: 13; color: root.panel2
-                                            ColumnLayout { anchors.fill: parent; anchors.margins: 12; spacing: 4; AppText { sourceText: "场景模式"; color: root.muted; font.pixelSize: 9 } AppText { sourceText: backend.gameScene.toUpperCase(); color: root.cyan; font.pixelSize: 15; font.weight: Font.DemiBold } }
+                                        Rectangle { Layout.fillWidth: true; height: 58; radius: 11; color: root.panel2
+                                            ColumnLayout { anchors.fill: parent; anchors.margins: 10; spacing: 3; AppText { sourceText: "场景模式"; color: root.muted; font.pixelSize: 9 } AppText { Layout.fillWidth: true; sourceText: backend.gameScene.toUpperCase(); color: root.cyan; font.pixelSize: 12; font.weight: Font.DemiBold; elide: Text.ElideRight } }
                                         }
                                     }
                                     Item { Layout.fillHeight: true }
-                                    Rectangle {
-                                        Layout.fillWidth: true; Layout.preferredHeight: 96; radius: 13
-                                        color: backend.readerError !== "" ? "#30201c" : "#142017"
-                                        border.color: backend.readerError !== "" ? root.red : root.border
-                                        ColumnLayout {
-                                            anchors.fill: parent; anchors.margins: 12; spacing: 7
-                                            RowLayout {
-                                                Layout.fillWidth: true; spacing: 8
-                                                ColumnLayout {
-                                                    Layout.fillWidth: true; spacing: 2
-                                                    AppText { sourceText: "自动检测失败回退"; font.weight: Font.DemiBold; font.pixelSize: 11 }
-                                                    AppText {
-                                                        Layout.fillWidth: true
-                                                        translateEnabled: !backend.manualGamePathConfigured; sourceText: backend.manualGamePathConfigured ? backend.gameExecutablePath : "未指定路径 · 默认按进程名自动查找"
-                                                        color: root.muted; font.pixelSize: 9; elide: Text.ElideMiddle
-                                                    }
-                                                }
-                                                AppButton { Layout.preferredWidth: 112; Layout.preferredHeight: 36; label: "选择游戏 EXE"; onClicked: gameExecutableDialog.open() }
-                                                AppButton { visible: backend.manualGamePathConfigured; Layout.preferredWidth: 86; Layout.preferredHeight: 36; label: "恢复自动"; onClicked: resetConfirmation.ask("恢复自动检测？", "将清除已保存的手动游戏路径，重新按进程名寻找游戏。", function() { backend.resetGameExecutablePath() }) }
-                                            }
-                                            RowLayout {
-                                                Layout.fillWidth: true; spacing: 8
-                                                StatusDot { active: backend.manualGamePathConfigured ? backend.gamePathSupported : backend.telemetryOnline }
-                                                AppText {
-                                                    Layout.fillWidth: true
-                                                    sourceText: backend.readerError !== "" ? backend.readerError : backend.gamePathStatus
-                                                    color: backend.readerError !== "" ? root.red : backend.manualGamePathConfigured ? (backend.gamePathSupported ? root.green : root.red) : root.muted
-                                                    font.pixelSize: 9; elide: Text.ElideRight
-                                                }
-                                                AppText {
-                                                    visible: backend.gameAssemblyHash !== ""
-                                                    sourceText: "SHA-256 " + backend.gameAssemblyHash.slice(0, 12) + "…"
-                                                    color: root.muted; font.family: "Consolas"; font.pixelSize: 8
-                                                }
-                                                AppText { sourceText: "外部只读 · 无注入"; color: root.yellow; font.pixelSize: 9 }
-                                            }
-                                        }
+                                    AppButton {
+                                        objectName: "gameDetectionDetailsButton"; label: "检测不到游戏？"; Layout.fillWidth: true; Layout.preferredHeight: 28
+                                        onClicked: connectionPage.detailsExpanded = !connectionPage.detailsExpanded
                                     }
                                 }
                             }
-                            Card { Layout.preferredWidth: 510; Layout.minimumWidth: 470; Layout.fillHeight: true
-                                RowLayout { anchors.fill: parent; anchors.margins: 20; spacing: 16
-                                    ColumnLayout { Layout.fillWidth: true; Layout.minimumWidth: 210; spacing: 6
-                                        AppText { sourceText: "DG-LAB Socket"; font.pixelSize: 17; font.weight: Font.DemiBold }
-                                        AppText { sourceText: backend.bridgeStatus; color: backend.serverError !== "" ? root.red : backend.deviceConnected ? root.green : root.yellow; font.pixelSize: 10; wrapMode: Text.WordWrap; Layout.fillWidth: true; maximumLineCount: 3; elide: Text.ElideRight }
-                                        AppComboBox { objectName: "connectionAddressChoice"; Layout.fillWidth: true; model: backend.lanInterfaces; textRole: "label"; valueRole: "address"; currentIndex: Math.max(0, backend.lanAddresses.indexOf(backend.lanAddress)); onActivated: backend.selectLanAddress(currentValue) }
-                                        AppText { sourceText: backend.lanAddress; color: root.muted; font.family: "Consolas"; font.pixelSize: 9 }
-                                        RowLayout { Layout.fillWidth: true; spacing: 7
-                                            AppButton { Layout.fillWidth: true; Layout.preferredHeight: 32; label: "刷新地址"; onClicked: backend.refreshLanAddresses() }
-                                            AppButton { objectName: "connectionHelpButton"; Layout.fillWidth: true; Layout.preferredHeight: 32; label: "连接不上？"; labelColor: root.yellow; onClicked: { backend.diagnoseConnection(); connectionHelp.open() } }
-                                        }
-                                        Rectangle { Layout.fillWidth: true; height: 1; color: root.border }
-                                        AppText { objectName: "automaticOutputNotice"; sourceText: "连接后自动同步 · 硬上限 " + backend.hardCap; color: root.green; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-                                        AppText { sourceText: "请先设置适合自己的低强度与硬上限。暂停 / 恢复和紧急归零始终位于右上角。"; color: root.muted; font.pixelSize: 9; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-                                        AppText { sourceText: backend.outputStatus; color: root.muted; font.pixelSize: 8; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-                                        Item { Layout.fillHeight: true }
+                            ConnectionCard {
+                                objectName: "socketConnectionCard"
+                                Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.fillHeight: true
+                                // A running listener/QR code is not a phone connection.
+                                // Only the currently selected protocol may light this card.
+                                readiness: connectionPage.appConnected ? 2 : 0
+                                fault: backend.serverError !== ""
+                                accent: root.violet
+                                ColumnLayout { anchors.fill: parent; anchors.margins: 18; spacing: 8
+                                    RowLayout { Layout.fillWidth: true
+                                        AppText { sourceText: "2 · 扫码连接"; font.pixelSize: 17; font.weight: Font.DemiBold; Layout.fillWidth: true }
+                                        StatusDot { active: connectionPage.appConnected }
+                                        AppText { sourceText: connectionPage.appConnected ? "App 在线" : "等待扫码"; color: connectionPage.appConnected ? root.violet : root.muted; font.pixelSize: 10 }
                                     }
-                                    Rectangle { Layout.preferredWidth: 200; Layout.minimumWidth: 200; Layout.preferredHeight: 200; radius: 14; color: "white"
-                                        Image { objectName: "connectionQrImage"; anchors.fill: parent; anchors.margins: 10; source: backend.qrSource; fillMode: Image.PreserveAspectFit }
-                                        AppText { objectName: "connectionQrPlaceholder"; anchors.centerIn: parent; width: parent.width - 28; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.WordWrap; visible: backend.qrSource === ""; sourceText: backend.serverError !== "" ? "二维码不可用\nSocket 服务启动失败\n请点“连接不上？”" : backend.serverReady ? "二维码暂不可用\n请点“连接不上？”" : "正在启动 Socket 服务…"; color: backend.serverError !== "" ? "#bf5e4b" : "#6d684f"; font.pixelSize: 12 }
+                                    RowLayout { Layout.fillWidth: true; spacing: 10
+                                        AppComboBox {
+                                            objectName: "socketProtocolChoice"; Layout.fillWidth: true
+                                            textRole: "name"; valueRole: "key"
+                                            model: [{key:"v3",name:"V3 · 保留原有连接"},{key:"v4",name:"V4 · DG-LAB 4"}]
+                                            currentIndex: backend.socketProtocol === "v4" ? 1 : 0
+                                            onActivated: { backend.selectSocketProtocol(currentValue); currentIndex=Qt.binding(function() { return backend.socketProtocol === "v4" ? 1 : 0 }) }
+                                        }
+                                    }
+                                    RowLayout { Layout.fillWidth: true; Layout.fillHeight: true; spacing: 14
+                                        ColumnLayout { Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 8
+                                            AppText { Layout.fillWidth: true; sourceText: connectionPage.appConnected ? "已连接，新设备会自动选择。核对设置后手动启用输出。" : "手机与电脑连接同一网络，使用 DG-LAB App 扫码。"; color: root.muted; font.pixelSize: 11; wrapMode: Text.WordWrap }
+                                            AppText { objectName: "automaticOutputNotice"; Layout.fillWidth: true; sourceText: (backend.socketProtocol === "v4" ? "选择设备并恢复后同步 · 硬上限 " : "连接后自动同步 · 硬上限 ") + backend.hardCap; color: root.green; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                                            AppText { visible: backend.serverError !== ""; Layout.fillWidth: true; sourceText: "连接服务异常，请打开连接帮助。"; color: root.red; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                                        }
+                                        Rectangle { visible: connectionPage.showQr; Layout.preferredWidth: 132; Layout.minimumWidth: 132; Layout.preferredHeight: 132; radius: 12; color: "white"
+                                            Image { objectName: "connectionQrImage"; anchors.fill: parent; anchors.margins: 8; source: backend.qrSource; fillMode: Image.PreserveAspectFit }
+                                            AppText { objectName: "connectionQrPlaceholder"; anchors.centerIn: parent; width: parent.width - 20; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.WordWrap; visible: backend.qrSource === ""; sourceText: backend.serverError !== "" ? "二维码不可用\n请点“连接不上？”" : "正在生成二维码…"; color: "#6d684f"; font.pixelSize: 11 }
+                                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; enabled: backend.qrSource !== ""; onClicked: guidePreview.openSource(backend.qrSource, "连接二维码") }
+                                        }
+                                    }
+                                    RowLayout { Layout.fillWidth: true; spacing: 8
+                                        AppButton { objectName: "toggleConnectionQrButton"; visible: connectionPage.appConnected; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.preferredHeight: 32; label: connectionPage.qrExpanded ? "收起二维码" : "显示二维码"; onClicked: connectionPage.qrExpanded = !connectionPage.qrExpanded }
+                                        AppButton { objectName: "connectionHelpButton"; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.preferredHeight: 32; label: "连接不上？"; labelColor: root.yellow; onClicked: { backend.diagnoseConnection(); connectionHelp.open() } }
+                                    }
+                                    AppButton { objectName:"ovcQrButton"; visible:backend.socketProtocol === "v3"; Layout.fillWidth:true; Layout.preferredHeight:30; label:"负鼠 V4 二维码"; enabled:backend.v4QrSource !== ""; onClicked:guidePreview.openSource(backend.v4QrSource,"负鼠 V4 二维码") }
+                                }
+                            }
+                        }
+                        RowLayout { Layout.fillWidth: true; spacing: 12
+                            AppText { sourceText: "3 · 选择设备，开始同步"; font.pixelSize: 16; font.weight: Font.DemiBold; Layout.fillWidth: true }
+                            AppButton { objectName: "connectionDetailsButton"; Layout.preferredWidth: 144; Layout.preferredHeight: 30; label: connectionPage.detailsExpanded ? "收起连接详情" : "连接详情与地址"; onClicked: connectionPage.detailsExpanded = !connectionPage.detailsExpanded }
+                        }
+                        RowLayout {
+                            objectName: "controllerControlsRow"
+                            Layout.fillWidth: true; spacing: 16
+                            ConnectionCard {
+                                objectName: "pulseConnectionCard"
+                                Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.preferredHeight: 226
+                                readiness: backend.deviceConnected ? backend.telemetryReady ? 2 : 1 : backend.pulseDeviceWaiting ? 1 : 0
+                                accent: root.cyan
+                                ColumnLayout {
+                                    anchors.fill: parent; anchors.margins: 18; spacing: 9
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        AppText { sourceText: "郊狼 Pulse"; font.pixelSize: 17; font.bold: true; Layout.fillWidth: true }
+                                        StatusDot { active: backend.deviceConnected }
+                                        AppText { objectName: "pulseConnectionStatus"; sourceText: backend.pulseDeviceMuted ? "通道已静音" : backend.deviceConnected ? "设备已连接" : backend.pulseDeviceWaiting ? "等待设备就绪" : "未连接"; color: backend.pulseDeviceMuted ? root.yellow : backend.deviceConnected ? root.green : backend.pulseDeviceWaiting ? root.yellow : root.muted; font.pixelSize: 10 }
+                                    }
+                                    AppComboBox {
+                                        objectName: "v4DeviceChoice"; visible: backend.socketProtocol === "v4"; Layout.fillWidth: true
+                                        textRole: "label"; model: [{label:"请选择郊狼设备"}].concat(backend.v4Devices)
+                                        currentIndex: backend.v4DeviceIndex
+                                        onModelChanged: Qt.callLater(function() { currentIndex=Qt.binding(function() { return backend.v4DeviceIndex }) })
+                                        onActivated: { backend.selectV4Device(currentIndex); currentIndex=Qt.binding(function() { return backend.v4DeviceIndex }) }
+                                    }
+                                    AppText { objectName: "pulseMuteHint"; Layout.fillWidth: true; sourceText: backend.pulseEnableReason !== "" ? backend.pulseEnableReason : "已连接，强度与波形独立保存。"; color: backend.pulseEnableReason !== "" ? root.yellow : root.muted; font.pixelSize: 10; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight }
+                                    AppText { sourceText: "安全上限 " + backend.hardCap; color: root.cyan; font.pixelSize: 12; font.bold: true }
+                                    Item { Layout.fillHeight: true; Layout.minimumHeight: 0 }
+                                    RowLayout {
+                                        Layout.fillWidth: true; spacing: 8
+                                        AppButton { objectName: "openPulseWorkbenchButton"; label: "进入工作台"; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.preferredHeight: 36; onClicked: root.openDeviceWorkbench("coyote", "strength") }
+                                        AppButton { objectName: "pulseRoutePauseButton"; readonly property bool unavailable: (backend.pulseRoutePaused || !backend.deviceConnected || backend.emergencyStopped) && backend.pulseEnableReason !== ""; label: unavailable ? "无法启用 · 查看原因" : backend.pulseRoutePaused ? "启用 Pulse" : "暂停 Pulse"; labelColor: unavailable ? root.yellow : root.cyan; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.preferredHeight: 36; onClicked: unavailable ? backend.explainOutputUnavailable("coyote") : backend.togglePulseOutput() }
+                                    }
+                                }
+                            }
+                            ConnectionCard {
+                                objectName: "ovcConnectionCard"
+                                Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.preferredHeight: 226
+                                readiness: backend.ovcConnected ? backend.telemetryReady ? 2 : 1 : 0
+                                accent: root.violet
+                                ColumnLayout {
+                                    anchors.fill: parent; anchors.margins: 18; spacing: 9
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        AppText { sourceText: "负鼠振动"; font.pixelSize: 17; font.bold: true; Layout.fillWidth: true }
+                                        StatusDot { active: backend.ovcConnected }
+                                        AppText { sourceText: backend.ovcConnected ? "设备已连接" : backend.ovcAccessoryHint !== "" ? "等待插入配件" : "未连接"; color: backend.ovcConnected ? root.green : backend.ovcAccessoryHint !== "" ? root.yellow : root.muted; font.pixelSize: 10 }
+                                    }
+                                    AppComboBox {
+                                        objectName: "ovcDeviceChoice"; Layout.fillWidth: true
+                                        textRole: "label"; model: [{label:"请选择负鼠设备"}].concat(backend.ovcDevices)
+                                        currentIndex: backend.ovcDeviceIndex
+                                        onModelChanged: Qt.callLater(function() { currentIndex=Qt.binding(function() { return backend.ovcDeviceIndex }) })
+                                        onActivated: { backend.selectOvcDevice(currentIndex); currentIndex=Qt.binding(function() { return backend.ovcDeviceIndex }) }
+                                    }
+                                    AppText { objectName: "ovcRouteStatus"; Layout.fillWidth: true; sourceText: backend.ovcEnableReason !== "" ? backend.ovcEnableReason : backend.ovcAccessoryHint !== "" ? backend.ovcAccessoryHint : "已连接，强度与波形独立保存。"; color: backend.ovcEnableReason !== "" || backend.ovcAccessoryHint !== "" ? root.yellow : root.muted; font.pixelSize: 10; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight }
+                                    AppText { sourceText: "安全上限 " + backend.ovcController.hardCap; color: root.violet; font.pixelSize: 12; font.bold: true }
+                                    Item { Layout.fillHeight: true; Layout.minimumHeight: 0 }
+                                    RowLayout {
+                                        Layout.fillWidth: true; spacing: 8
+                                        AppButton { objectName: "openOvcConfigButton"; label: "进入工作台"; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.preferredHeight: 36; onClicked: root.openDeviceWorkbench("ovc", "strength") }
+                                        AppButton { objectName: "ovcRoutePauseButton"; readonly property bool unavailable: (backend.ovcRoutePaused || !backend.ovcConnected || backend.emergencyStopped) && backend.ovcEnableReason !== ""; label: unavailable ? "无法启用 · 查看原因" : backend.ovcRoutePaused ? "启用振动" : "暂停振动"; labelColor: unavailable ? root.yellow : root.violet; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.preferredHeight: 36; onClicked: unavailable ? backend.explainOutputUnavailable("ovc") : backend.toggleOvcOutput() }
                                     }
                                 }
                             }
                         }
-                        Card { Layout.fillWidth: true; Layout.preferredHeight: 300
+                        AppText { Layout.fillWidth: true; sourceText: "两台设备可同时运行；同一个 DG-LAB 4 App 只需扫码一次。暂停与紧急归零始终在右上角。"; color: root.muted; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                        Card {
+                            objectName: "connectionAdvancedDetails"; visible: connectionPage.detailsExpanded; Layout.fillWidth: true; Layout.preferredHeight: detailsContent.implicitHeight + 36
+                            ColumnLayout { id: detailsContent; anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 18; spacing: 12
+                                AppText { sourceText: "连接详情与地址"; font.pixelSize: 16; font.weight: Font.DemiBold }
+                                RowLayout { Layout.fillWidth: true; spacing: 16
+                                    ColumnLayout { Layout.fillWidth: true; Layout.preferredWidth: 1; spacing: 8
+                                        AppText { sourceText: "游戏检测"; font.weight: Font.DemiBold }
+                                        AppText { Layout.fillWidth: true; sourceText: backend.telemetryStatus + (backend.processId ? " · PID " + backend.processId : ""); color: root.muted; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                                        AppText { Layout.fillWidth: true; translateEnabled: !backend.manualGamePathConfigured; sourceText: backend.manualGamePathConfigured ? backend.gameExecutablePath : "未指定路径 · 默认按进程名自动查找"; color: root.muted; font.pixelSize: 10; elide: Text.ElideMiddle }
+                                        AppText { Layout.fillWidth: true; sourceText: backend.readerError !== "" ? backend.readerError : backend.gamePathStatus; color: backend.readerError !== "" ? root.red : root.muted; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                                        AppText { visible: backend.gameAssemblyHash !== ""; sourceText: "SHA-256 " + backend.gameAssemblyHash.slice(0, 12) + "…"; color: root.muted; font.family: "Consolas"; font.pixelSize: 9 }
+                                        RowLayout { Layout.fillWidth: true; spacing: 8
+                                            AppButton { Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.preferredHeight: 34; label: "选择游戏 EXE"; onClicked: gameExecutableDialog.open() }
+                                            AppButton { visible: backend.manualGamePathConfigured; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.preferredHeight: 34; label: "恢复自动"; onClicked: resetConfirmation.ask("恢复自动检测？", "将清除已保存的手动游戏路径，重新按进程名寻找游戏。", function() { backend.resetGameExecutablePath() }) }
+                                        }
+                                    }
+                                    ColumnLayout { Layout.fillWidth: true; Layout.preferredWidth: 1; spacing: 8
+                                        AppText { sourceText: "网络地址"; font.weight: Font.DemiBold }
+                                        AppComboBox { objectName: "connectionAddressChoice"; Layout.fillWidth: true; model: backend.lanInterfaces; textRole: "label"; valueRole: "address"; currentIndex: Math.max(0, backend.lanAddresses.indexOf(backend.lanAddress)); onActivated: backend.selectLanAddress(currentValue) }
+                                        AppText { Layout.fillWidth: true; sourceText: backend.bridgeStatus; color: backend.serverError !== "" ? root.red : root.muted; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                                        AppButton { Layout.fillWidth: true; Layout.preferredHeight: 34; label: "刷新地址"; onClicked: backend.refreshLanAddresses() }
+                                    }
+                                }
+                                Rectangle { Layout.fillWidth: true; height: 1; color: root.border }
+                                AppText { objectName: "v4DeviceStatus"; Layout.fillWidth: true; sourceText: "郊狼 Pulse · " + (backend.socketProtocol === "v4" ? backend.v4DeviceStatus : backend.bridgeStatus); color: root.yellow; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                                AppText { objectName: "ovcDeviceStatus"; Layout.fillWidth: true; sourceText: "负鼠振动 · " + backend.ovcDeviceStatus; color: root.yellow; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                                AppText { Layout.fillWidth: true; sourceText: backend.outputStatus; color: root.muted; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                                AppText { Layout.fillWidth: true; sourceText: backend.ovcStatus; color: root.muted; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                                AppText { Layout.fillWidth: true; sourceText: "外部只读 · 无注入"; color: root.muted; font.pixelSize: 10 }
+                            }
+                        }
+                        Card { visible: connectionPage.detailsExpanded && backend.socketProtocol === "v3"; Layout.fillWidth: true; Layout.preferredHeight: 300
                             ColumnLayout { anchors.fill: parent; anchors.margins: 20; spacing: 12
                                 RowLayout { Layout.fillWidth: true; AppText { sourceText: "DG-LAB 3.0 连接向导"; font.pixelSize: 17; font.weight: Font.DemiBold; Layout.fillWidth: true } AppText { sourceText: "依次完成四步"; color: root.muted; font.pixelSize: 10 } }
                                 RowLayout { Layout.fillWidth: true; Layout.fillHeight: true; spacing: 12
@@ -876,11 +1041,11 @@ ApplicationWindow {
                     Card { anchors.fill: parent; anchors.margins: 24
                         ColumnLayout { anchors.fill: parent; anchors.margins: 26; spacing: 11
                             RowLayout { Layout.fillWidth: true
-                                AppText { sourceText: "强度方案"; font.pixelSize: 17; font.weight: Font.DemiBold; Layout.fillWidth: true }
+                                AppText { sourceText: backend.outputProfile === "ovc" ? "负鼠独立强度" : "强度方案"; font.pixelSize: 17; font.weight: Font.DemiBold; Layout.fillWidth: true }
                                 AppButton { objectName:"openHotkeySettingsButton"; label:"全局急停键"; onClicked:hotkeySettings.open() }
-                                AppButton { label: "低档预设"; onClicked: personalPage.applyPreset(5,15,25,25,30) }
-                                AppButton { label: "中档预设"; fillColor: Qt.rgba(root.violet.r,root.violet.g,root.violet.b,.22); onClicked: personalPage.applyPreset(15,30,40,55,60) }
-                                AppButton { label: "高档预设"; fillColor: Qt.rgba(root.red.r,root.red.g,root.red.b,.22); onClicked: personalPage.applyPreset(30,45,60,80,90) }
+                                AppButton { visible: backend.outputProfile !== "ovc"; label: "低档预设"; onClicked: personalPage.applyPreset(5,15,25,25,30) }
+                                AppButton { visible: backend.outputProfile !== "ovc"; label: "中档预设"; fillColor: Qt.rgba(root.violet.r,root.violet.g,root.violet.b,.22); onClicked: personalPage.applyPreset(15,30,40,55,60) }
+                                AppButton { visible: backend.outputProfile !== "ovc"; label: "高档预设"; fillColor: Qt.rgba(root.red.r,root.red.g,root.red.b,.22); onClicked: personalPage.applyPreset(30,45,60,80,90) }
                             }
                             AppText { sourceText: "选择一套起点后，下面五项仍可分别调节；点击底部“应用并保存”后生效。"; color: root.muted; font.pixelSize: 10 }
                             Rectangle { Layout.fillWidth: true; height: 1; color: root.border }
@@ -900,121 +1065,45 @@ ApplicationWindow {
                 }
 
                 Item {
-                    id: empathyPage
-                    property string catalogFilter: "all"
-                    property string selectedWaveKey: "impact"
-                    property bool fixedMode: false
-                    property var selectedWave: root.waveItem(selectedWaveKey)
-                    property var filteredCatalog: {
-                        var values = []
-                        for (var i=0; i<backend.waveformCatalog.length; ++i) {
-                            var item = backend.waveformCatalog[i]
-                            if (catalogFilter === "all" || item.group === catalogFilter) values.push(item)
-                        }
-                        return values
+                    DeviceWorkbench {
+                        id: pulseWorkbench
+                        objectName: "pulseWorkbenchPage"
+                        anchors.fill: parent; anchors.margins: 16
+                        controller: backend
+                        vibration: false
+                        onWaveformLibraryRequested: waveLibrary.open()
+                        onAudioSourceRequested: root.pageIndex=6
+                        onHotkeySettingsRequested: hotkeySettings.open()
+                        onManualControlRequested:root.pageIndex=9
                     }
-                    ColumnLayout { anchors.fill: parent; anchors.margins: 16; spacing: 14
-                        RowLayout { Layout.fillWidth: true; Layout.preferredHeight: 42
-                            AppButton { label: "智能分段"; fillColor: !empathyPage.fixedMode ? root.pink : root.panel2; labelColor: !empathyPage.fixedMode ? "#18251c" : root.ink; onClicked: empathyPage.fixedMode=false }
-                            AppButton { label: "固定预设"; fillColor: empathyPage.fixedMode ? root.pink : root.panel2; labelColor: empathyPage.fixedMode ? "#18251c" : root.ink; onClicked: empathyPage.fixedMode=true }
-                            Item { Layout.fillWidth: true }
-                            AppButton { objectName: "restoreMappingsButton"; label: "恢复默认"; onClicked: resetConfirmation.ask("恢复默认通道策略？", "默认 A＝HP＋动作，B＝战斗动作／剧情音频队列。将恢复通道策略及事件映射并保存，不修改强度、安全硬上限、音频监听开关或已保存队列，也不删除自定义波形。恢复后自动应用，保留手动暂停状态。", function() { if (backend.resetEventMappings()) { empathyPage.fixedMode=false; empathyPage.selectedWaveKey="impact" } }) }
-                            AppButton { label: empathyPage.fixedMode ? "应用固定波形" : "分别保存通道策略"; fillColor: root.green; labelColor: "#18251c"; enabled: empathyPage.fixedMode; onClicked: backend.applyWaveformToAllEvents(empathyPage.selectedWaveKey) }
-                        }
-                        Card { Layout.fillWidth: true; Layout.preferredHeight: 282
-                            ColumnLayout { anchors.fill: parent; anchors.margins: 16; spacing: 9
-                                RowLayout { Layout.fillWidth: true
-                                    AppText { sourceText: "波形预设与我的波形库"; font.pixelSize: 17; font.weight: Font.DemiBold }
-                                    AppText { sourceText: empathyPage.filteredCatalog.length + " 个波形"; color: root.muted; font.pixelSize: 10; Layout.fillWidth: true }
-                                    Repeater { model: [{key:"all",label:"全部"},{key:"official",label:"官方波形"},{key:"custom",label:"自定义波形"},{key:"builtin",label:"内置波形"}]
-                                        delegate: AppButton { required property var modelData; Layout.preferredWidth: 92; Layout.preferredHeight: 34; label: modelData.label; fillColor: empathyPage.catalogFilter===modelData.key ? root.pink : root.panel2; labelColor: empathyPage.catalogFilter===modelData.key ? "#18251c" : root.ink; onClicked: empathyPage.catalogFilter=modelData.key }
-                                    }
-                                }
-                                ListView { id: waveGallery; Layout.fillWidth: true; Layout.fillHeight: true; orientation: ListView.Horizontal; spacing: 10; clip: true; boundsBehavior: Flickable.StopAtBounds; model: empathyPage.filteredCatalog
-                                    delegate: Rectangle {
-                                        required property var modelData
-                                        width: 250; height: waveGallery.height; radius: 14; color: waveHover.hovered ? Qt.lighter(root.panel2,1.08) : root.panel2
-                                        border.color: empathyPage.selectedWaveKey===modelData.key ? modelData.color : root.border
-                                        HoverHandler { id: waveHover }
-                                        MouseArea { anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: empathyPage.selectedWaveKey=modelData.key }
-                                        ColumnLayout { anchors.fill: parent; anchors.margins: 11; spacing: 5
-                                            RowLayout { Layout.fillWidth: true; AppText { sourceText: modelData.name; font.weight: Font.DemiBold; font.pixelSize: 11; Layout.fillWidth: true; elide: Text.ElideRight } AppText { sourceText: modelData.group==="custom" ? "自定义" : modelData.source; color: modelData.group==="custom" ? root.cyan : root.muted; font.pixelSize: 8 } }
-                                            WaveCanvas { Layout.fillWidth: true; Layout.fillHeight: true; points: modelData.points; accent: modelData.color; tiled: true; animated: waveHover.hovered }
-                                            RowLayout { Layout.fillWidth: true; AppText { sourceText: modelData.frequency + " Hz"; color: root.muted; font.pixelSize: 9; Layout.fillWidth: true } AppText { sourceText: empathyPage.selectedWaveKey===modelData.key ? "已选择" : "悬停预览"; color: empathyPage.selectedWaveKey===modelData.key ? modelData.color : root.muted; font.pixelSize: 9 } }
-                                        }
-                                    }
-                                }
-                                RowLayout { Layout.fillWidth: true; AppText { sourceText: "拖动卡片区域或使用滚轮浏览"; color: root.muted; font.pixelSize: 9; Layout.fillWidth: true } AppButton { Layout.preferredWidth: 54; Layout.preferredHeight: 32; label: "‹"; onClicked: waveGallery.contentX=Math.max(0,waveGallery.contentX-260) } AppButton { Layout.preferredWidth: 54; Layout.preferredHeight: 32; label: "›"; onClicked: waveGallery.contentX=Math.min(Math.max(0,waveGallery.contentWidth-waveGallery.width),waveGallery.contentX+260) } }
-                            }
-                        }
-                        RowLayout { Layout.fillWidth: true; Layout.fillHeight: true; spacing: 14
-                            Card { Layout.preferredWidth: 420; Layout.fillHeight: true
-                                ColumnLayout { anchors.fill: parent; anchors.margins: 20; spacing: 10
-                                    RowLayout { Layout.fillWidth: true; AppText { sourceText: empathyPage.fixedMode ? "固定波形" : "通道策略"; font.pixelSize: 17; font.weight: Font.DemiBold; Layout.fillWidth: true } AppText { sourceText: empathyPage.fixedMode ? "始终使用" : "A / B"; color: root.muted; font.pixelSize: 10 } }
-                                    Rectangle { Layout.fillWidth: true; Layout.fillHeight: true; radius: 15; color: root.panel2; border.color: root.cyan
-                                        RowLayout { anchors.fill: parent; anchors.margins: 14; spacing: 12
-                                            Rectangle { width: 46; height: 46; radius: 14; color: Qt.rgba(root.cyan.r,root.cyan.g,root.cyan.b,.15); AppText { anchors.centerIn: parent; sourceText: "A"; color: root.cyan; font.pixelSize: 19; font.bold: true } }
-                                            ColumnLayout { Layout.fillWidth: true; spacing: 2; AppText { sourceText: "A 通道 · " + (backend.channelPolicies ? backend.channelModeName("A") : ""); font.pixelSize: 14; font.weight: Font.DemiBold } AppText { sourceText: "独立来源、强度、波形与时长"; color: root.muted; font.pixelSize: 9 } }
-                                            WaveCanvas { Layout.preferredWidth: 112; Layout.fillHeight: true; points: empathyPage.fixedMode ? empathyPage.selectedWave.points : root.waveItem("impact").points; accent: root.cyan; tiled: true }
-                                            AppText { sourceText: "›"; color: root.cyan; font.pixelSize: 24 }
-                                        }
-                                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: channelStrategy.openChannel("A") }
-                                    }
-                                    Rectangle { Layout.fillWidth: true; Layout.fillHeight: true; radius: 15; color: root.panel2; border.color: root.violet
-                                        RowLayout { anchors.fill: parent; anchors.margins: 14; spacing: 12
-                                            Rectangle { width: 46; height: 46; radius: 14; color: Qt.rgba(root.violet.r,root.violet.g,root.violet.b,.15); AppText { anchors.centerIn: parent; sourceText: "B"; color: root.violet; font.pixelSize: 19; font.bold: true } }
-                                            ColumnLayout { Layout.fillWidth: true; spacing: 2; AppText { sourceText: "B 通道 · " + (backend.channelPolicies ? backend.channelModeName("B") : ""); font.pixelSize: 14; font.weight: Font.DemiBold } AppText { sourceText: "独立配置 · 重叠时较强者接管"; color: root.muted; font.pixelSize: 9 } }
-                                            WaveCanvas { Layout.preferredWidth: 112; Layout.fillHeight: true; points: empathyPage.fixedMode ? empathyPage.selectedWave.points : root.waveItem("heavy_land").points; accent: root.violet; tiled: true }
-                                            AppText { sourceText: "›"; color: root.violet; font.pixelSize: 24 }
-                                        }
-                                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: channelStrategy.openChannel("B") }
-                                    }
-                                }
-                            }
-                            Card { Layout.fillWidth: true; Layout.fillHeight: true
-                                ColumnLayout { anchors.fill: parent; anchors.margins: 20; spacing: 10
-                                    RowLayout { Layout.fillWidth: true; AppText { sourceText: "自定义波形设计器"; font.pixelSize: 17; font.weight: Font.DemiBold; Layout.fillWidth: true } AppText { sourceText: "独立窗口编辑"; color: root.muted; font.pixelSize: 10 } }
-                                    Rectangle { Layout.fillWidth: true; Layout.fillHeight: true; radius: 15; color: "#142017"; border.color: empathyPage.selectedWave.color
-                                        ColumnLayout { anchors.fill: parent; anchors.margins: 14; spacing: 7
-                                            RowLayout { Layout.fillWidth: true; AppText { sourceText: empathyPage.selectedWave.name; font.pixelSize: 14; font.weight: Font.DemiBold; Layout.fillWidth: true } AppText { sourceText: empathyPage.selectedWave.frequency + " Hz"; color: root.cyan; font.pixelSize: 10 } }
-                                            WaveCanvas { Layout.fillWidth: true; Layout.fillHeight: true; points: empathyPage.selectedWave.points; accent: empathyPage.selectedWave.color; tiled: true; animated: true }
-                                            AppText { sourceText: "打开编辑器可使用模板、平滑、镜像、归一化和撤销。"; color: root.muted; font.pixelSize: 9 }
-                                        }
-                                    }
-                                    RowLayout { Layout.fillWidth: true
-                                        AppButton { Layout.fillWidth: true; label: "新建波形"; onClicked: waveformEditor.openFrom("Ricca 自定义",[0,18,48,82,100,58,20,0,0,25,68,45,15,0,0,0],92) }
-                                        AppButton { Layout.fillWidth: true; label: "编辑当前波形"; fillColor: root.cyan; labelColor: "#18251c"; onClicked: waveformEditor.openFrom(empathyPage.selectedWave.name,empathyPage.selectedWave.points,empathyPage.selectedWave.frequency) }
-                                        AppButton { Layout.preferredWidth: 92; label: "打开目录"; onClicked: backend.openWaveformLibraryFolder() }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                 }
 
                 Item {
                     RowLayout { anchors.fill: parent; anchors.margins: 20; spacing: 16
                         Repeater {
-                            model: [
-                                {channel:"A", name:root.waveName(backend.waveA), points:backend.waveAPoints, strength:backend.previewA, color:root.pink, detail:backend.channelPolicies ? backend.channelModeName("A") : ""},
-                                {channel:"B", name:root.waveName(backend.waveB), points:backend.waveBPoints, strength:backend.previewB, color:root.violet, detail:backend.channelPolicies ? backend.channelModeName("B") : ""}
-                            ]
+                            model: ["A", "B"]
                             delegate: Card {
-                                required property var modelData
+                                required property string modelData
+                                readonly property bool channelA: modelData === "A"
+                                readonly property var monitorData: ({channel:modelData,
+                                    name:root.waveName(channelA ? backend.waveA : backend.waveB),
+                                    points:channelA ? backend.waveAPoints : backend.waveBPoints,
+                                    strength:channelA ? backend.previewA : backend.previewB,
+                                    color:channelA ? root.pink : root.violet,
+                                    detail:backend.channelModeName(modelData)})
                                 Layout.fillWidth: true; Layout.fillHeight: true
                                 ColumnLayout { anchors.fill: parent; anchors.margins: 24; spacing: 12
                                     RowLayout { Layout.fillWidth: true
-                                        Rectangle { width: 46; height: 46; radius: 14; color: Qt.rgba(modelData.color.r,modelData.color.g,modelData.color.b,.14); AppText { anchors.centerIn: parent; sourceText: modelData.channel; color: modelData.color; font.pixelSize: 18; font.bold: true } }
-                                        ColumnLayout { spacing: 2; AppText { sourceText: modelData.channel + " 通道"; font.pixelSize: 17; font.weight: Font.DemiBold } AppText { sourceText: modelData.detail; color: root.muted; font.pixelSize: 10 } }
+                                        Rectangle { width: 46; height: 46; radius: 14; color: Qt.rgba(monitorData.color.r,monitorData.color.g,monitorData.color.b,.14); AppText { anchors.centerIn: parent; sourceText: monitorData.channel; color: monitorData.color; font.pixelSize: 18; font.bold: true } }
+                                        ColumnLayout { spacing: 2; AppText { sourceText: monitorData.channel + " 通道"; font.pixelSize: 17; font.weight: Font.DemiBold } AppText { sourceText: monitorData.detail; color: root.muted; font.pixelSize: 10 } }
                                         Item { Layout.fillWidth: true }
-                                        AppText { sourceText: modelData.strength.toFixed(1) + " / " + backend.hardCap; color: modelData.color; font.pixelSize: 13; font.bold: true }
+                                        AppText { sourceText: Number(monitorData.strength || 0).toFixed(1) + " / " + backend.hardCap; color: monitorData.color; font.pixelSize: 13; font.bold: true }
                                     }
-                                    WaveCanvas { Layout.fillWidth: true; Layout.fillHeight: true; points: modelData.points; accent: modelData.color; tiled: true; animated: modelData.strength > 0 }
+                                    WaveCanvas { Layout.fillWidth: true; Layout.fillHeight: true; points: monitorData.points; accent: monitorData.color; tiled: true; animated: monitorData.strength > 0 }
                                     Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 78; radius: 15; color: root.panel2
                                         RowLayout { anchors.fill: parent; anchors.margins: 15
-                                            ColumnLayout { Layout.fillWidth: true; spacing: 3; AppText { sourceText: "当前选择"; color: root.muted; font.pixelSize: 9 } AppText { sourceText: modelData.name; color: modelData.color; font.pixelSize: 13; font.weight: Font.DemiBold } }
-                                            AppText { sourceText: modelData.strength > 0 ? (backend.outputArmed ? "实时输出请求" : "模拟预览") : "安全待机"; color: modelData.strength > 0 ? root.green : root.yellow; font.pixelSize: 10; font.weight: Font.DemiBold }
+                                            ColumnLayout { Layout.fillWidth: true; spacing: 3; AppText { sourceText: "当前选择"; color: root.muted; font.pixelSize: 9 } AppText { sourceText: monitorData.name; color: monitorData.color; font.pixelSize: 13; font.weight: Font.DemiBold } }
+                                            AppText { sourceText: monitorData.strength > 0 ? (backend.outputArmed ? "实时输出请求" : "模拟预览") : "安全待机"; color: monitorData.strength > 0 ? root.green : root.yellow; font.pixelSize: 10; font.weight: Font.DemiBold }
                                         }
                                     }
                                 }
@@ -1049,7 +1138,11 @@ ApplicationWindow {
                             AppText { sourceText:backend.currentSceneId || "等待剧情场景"; color:root.muted; font.pixelSize:11; Layout.fillWidth:true; elide:Text.ElideMiddle }
                             AppButton { objectName:"openSceneLibraryButton"; label:"场景记录 · "+backend.sceneLibrary.length+" / "+backend.registeredSceneCount; Layout.preferredWidth:200; onClicked:sceneLibraryDialog.open() }
                         }
-                        StoryQueueEditor { id:storyQueueEditor; controller:backend; Layout.fillWidth:true; Layout.preferredHeight:implicitHeight }
+                        RowLayout { Layout.fillWidth:true
+                            AppText { Layout.fillWidth:true; wrapMode:Text.WordWrap; sourceText:"剧情播放方式与循环队列已集中到各设备工作台。"; color:root.muted; font.pixelSize:12 }
+                            AppButton { label:"郊狼工作台"; onClicked:root.openDeviceWorkbench("coyote","story") }
+                            AppButton { label:"负鼠工作台"; onClicked:root.openDeviceWorkbench("ovc","story") }
+                        }
                         RowLayout { Layout.fillWidth: true; spacing: 16
                             Card { Layout.fillWidth: true; Layout.preferredHeight: 150; ColumnLayout { anchors.fill: parent; anchors.margins: 18; spacing: 9; AppText { sourceText: "检测状态"; color: root.muted; font.pixelSize: 11 } AppText { sourceText: backend.storySceneActive ? "剧情控制器在线" : "等待 ADV / ATD / ANV 剧情"; font.pixelSize: 17; font.weight: Font.DemiBold } AppText { sourceText: "行号、说话人与正文变化会记录为事件。"; color: root.muted; wrapMode: Text.WordWrap; Layout.fillWidth: true } } }
                             Card { Layout.fillWidth: true; Layout.preferredHeight: 150; ColumnLayout { anchors.fill: parent; anchors.margins: 18; spacing: 9; AppText { sourceText: "音频共感"; color: root.muted; font.pixelSize: 11 } AppText { sourceText: backend.audioEmpathyEnabled ? "独立检测已启用" : "默认关闭"; color: backend.audioEmpathyEnabled ? root.cyan : root.muted; font.pixelSize: 17; font.weight: Font.DemiBold } AppText { sourceText: "音频采集、门限与 Pulse 模拟已移至左侧“音频共感”，不再属于事件波形映射。"; color: root.muted; wrapMode: Text.WordWrap; Layout.fillWidth: true } } }
@@ -1066,36 +1159,13 @@ ApplicationWindow {
                     property string draftDeviceId: ""
                     property int draftSensitivity: 55
                     property int draftGate: 12
-                    property real draftGain: 1.0
-                    property bool gainPending: false
-                    property int draftMinimum: 0
-                    property bool minimumPending: false
                     property bool draftDirty: false
                     function loadSaved() {
                         draftEnabled=backend.audioEmpathyEnabled
                         draftDeviceId=backend.audioDeviceId
                         draftSensitivity=backend.audioSensitivity
                         draftGate=backend.audioGate
-                        if (!gainPending) draftGain=backend.audioGain
-                        if (!minimumPending) draftMinimum=backend.audioQueueMinimum
                         draftDirty=false
-                    }
-                    Timer {
-                        id: gainCommit; interval: 180
-                        onTriggered: {
-                            if (audioGainSlider.pressed) return
-                            backend.saveAudioGain(audioPage.draftGain)
-                            audioPage.gainPending=false
-                            audioPage.draftGain=backend.audioGain
-                        }
-                    }
-                    Timer {
-                        id: minimumCommit; interval: 180
-                        onTriggered: {
-                            backend.saveAudioQueueMinimum(audioPage.draftMinimum)
-                            audioPage.minimumPending=false
-                            audioPage.draftMinimum=backend.audioQueueMinimum
-                        }
                     }
                     Component.onCompleted: loadSaved()
                     Connections { target: backend; function onChanged() { if (!audioPage.draftDirty) audioPage.loadSaved() } }
@@ -1151,7 +1221,7 @@ ApplicationWindow {
                                         AppText { sourceText: "输出通道"; color: root.muted; font.pixelSize: 10 }
                                         AppText { Layout.fillWidth: true; sourceText: "默认 B：战斗动作 / 剧情音频队列；音量只调强度"; color: root.cyan; font.pixelSize: 10; wrapMode: Text.WordWrap }
                                     }
-                                    AppButton { objectName:"editAudioStoryQueueButton"; label:"编辑 B 剧情队列 →"; Layout.fillWidth:true; Layout.preferredHeight:34; onClicked:{ root.pageIndex=5; storyQueueEditor.selectChannel("B") } }
+                                    AppButton { objectName:"editAudioStoryQueueButton"; label:"剧情播放设置 →"; Layout.fillWidth:true; Layout.preferredHeight:34; onClicked:{ root.pageIndex=3; pulseWorkbench.showQueue("B") } }
                                 }
                             }
                         }
@@ -1179,33 +1249,14 @@ ApplicationWindow {
                             }
                         }
 
-                        Card { Layout.fillWidth: true; Layout.preferredHeight: 270
-                            ColumnLayout { anchors.fill: parent; anchors.margins: 20; spacing: 12
-                                RowLayout { Layout.fillWidth: true; AppText { sourceText: "转换参数"; font.pixelSize: 18; font.weight: Font.DemiBold; Layout.fillWidth: true } AppText { sourceText: "安全上限 " + backend.hardCap; color: root.yellow; font.pixelSize: 11 } }
-                                RowLayout { Layout.fillWidth: true; spacing: 14
-                                    AppText { sourceText: "强度增益"; Layout.preferredWidth: 92; color: root.muted; font.pixelSize: 11 }
-                                    AppSlider {
-                                        id: audioGainSlider; objectName: "audioGainSlider"
-                                        Layout.fillWidth: true; from: 0; to: 10; stepSize: 0.1; value: audioPage.draftGain
-                                        onMoved: { audioPage.draftGain=Math.round(value*10)/10; audioPage.gainPending=true; if (!pressed) gainCommit.restart() }
-                                        onPressedChanged: if (!pressed && audioPage.gainPending) gainCommit.restart()
-                                    }
-                                    Rectangle { width: 72; height: 32; radius: 9; color: root.panel2; AppText { anchors.centerIn: parent; sourceText: audioPage.draftGain.toFixed(1) + "×"; color: root.cyan; font.bold: true } }
-                                }
-                                AppText { sourceText: "向右增强，0× 静音；松开后自动保存并应用。静音门控在后台处理，旧参数保留。"; color: root.muted; font.pixelSize: 10; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-                                RowLayout { Layout.fillWidth: true; spacing: 14
-                                    AppText { sourceText: "音频队列最低强度"; Layout.preferredWidth: 155; color: root.muted; font.pixelSize: 11 }
-                                    Basic.SpinBox {
-                                        objectName: "audioQueueMinimumInput"; Layout.preferredWidth: 110; Layout.preferredHeight: 38
-                                        from: 0; to: backend.hardCap; stepSize: 1; editable: true; value: audioPage.draftMinimum
-                                        font.family: backend.uiFontFamily
-                                        onValueModified: { audioPage.draftMinimum=value; audioPage.minimumPending=true; minimumCommit.restart() }
-                                    }
-                                    AppText { sourceText: "仅循环＋音频：语音空隙维持此强度；0 关闭。自动保存，休止段与安全暂停仍归零。"; color: root.muted; font.pixelSize: 10; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-                                }
-                                RowLayout { Layout.fillWidth: true
-                                    AppText { sourceText: "增益作用于音频映射及音频队列，不改变战斗、死亡惩罚或安全上限。休止段仍无输出。"; color: root.muted; font.pixelSize: 9; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-                                    AppButton { objectName: "applyAudioSettingsButton"; Layout.preferredWidth: 154; fillColor: root.green; labelColor: "#18251c"; label: "应用音频设置"; onClicked: { if (backend.saveAudioEmpathySettings(audioPage.draftEnabled,audioPage.draftDeviceId,audioPage.draftSensitivity,audioPage.draftGate,backend.audioChannel,true)) audioPage.loadSaved() } }
+                        Card { Layout.fillWidth:true; Layout.preferredHeight:150
+                            ColumnLayout { anchors.fill:parent; anchors.margins:20; spacing:12
+                                AppText { Layout.fillWidth:true; wrapMode:Text.WordWrap; sourceText:"音频来源由两台设备共用；播放方式、增益与最低强度在各自工作台的“剧情与鉴赏”中设置。"; color:root.muted; font.pixelSize:12 }
+                                RowLayout { Layout.fillWidth:true
+                                    AppButton { label:"郊狼工作台"; onClicked:root.openDeviceWorkbench("coyote","story") }
+                                    AppButton { label:"负鼠工作台"; onClicked:root.openDeviceWorkbench("ovc","story") }
+                                    Item { Layout.fillWidth:true }
+                                    AppButton { objectName:"applyAudioSettingsButton"; label:"应用音频设置"; fillColor:root.green; labelColor:"#18251c"; Layout.preferredWidth:160; onClicked:{ if(backend.saveAudioEmpathySettings(audioPage.draftEnabled,audioPage.draftDeviceId,audioPage.draftSensitivity,audioPage.draftGate,backend.audioChannel,true))audioPage.loadSaved() } }
                                 }
                             }
                         }
@@ -1232,12 +1283,27 @@ ApplicationWindow {
                         }
                     }
                 }
+                Item {
+                    objectName: "ovcWorkbenchContainer"
+                    OvcWorkbench {
+                        id: ovcWorkbench
+                        objectName: "ovcWorkbenchPage"
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        controller: backend.ovcController
+                        onAudioSourceRequested: root.pageIndex=6
+                        onManualControlRequested:root.pageIndex=9
+                    }
+                }
+                ManualControlPage {}
             }
         }
     }
 
     WaveEditorDialog { id: waveformEditor }
+    WaveLibraryDialog { id: waveLibrary; controller: backend; onEditRequested:function(name,points,frequency) { waveformEditor.openFrom(name,points,frequency) } }
     HotkeyDialog { id:hotkeySettings }
+    HudSettingsDialog {id:hudSettings}
     ConfirmResetDialog { id: resetConfirmation }
     Popup {
         id: saveToast
@@ -1263,12 +1329,15 @@ ApplicationWindow {
         }
     }
     Timer { id: toastTimer; interval: 3600; onTriggered: saveToast.close() }
-    Connections { target: backend; function onToastRequested(title, message) { saveToast.heading=title; saveToast.message=message; saveToast.open(); toastTimer.restart() } }
+    Connections {
+        target: backend
+        function onToastRequested(title, message) { saveToast.heading=title; saveToast.message=message; saveToast.open(); toastTimer.restart() }
+    }
     GuidePreviewDialog { id: guidePreview }
-    ChannelStrategyDialog { id: channelStrategy; controller: backend; onQueueEditorRequested:function(channel) { root.pageIndex=5; storyQueueEditor.selectChannel(channel) } }
+    ChannelStrategyDialog { id: channelStrategy; controller: backend; onQueueEditorRequested:function(channel) { root.pageIndex=3; pulseWorkbench.showQueue(channel) } }
     ConnectionHelpDialog { id: connectionHelp; controller: backend }
     SceneLibraryDialog { id: sceneLibraryDialog; controller: backend }
-    OnboardingDialog { id:onboarding; controller:backend; onNavigateRequested:function(page) { root.pageIndex=page } }
+    OnboardingDialog { id:onboarding; controller:backend; onNavigateRequested:function(page) { if (page === 2) root.openDeviceWorkbench("coyote","strength"); else if (page === 3) root.openDeviceWorkbench("coyote","battle"); else root.pageIndex=page } }
     FileDialog {
         id: gameExecutableDialog
         title: backend.localize("选择 Holy Knight Ricca 游戏程序", backend.language)

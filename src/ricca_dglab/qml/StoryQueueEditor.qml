@@ -26,7 +26,7 @@ Item {
     function loadChannel(value) {
         channel = value
         waves = [{key:"idle",name:"休止（无输出）",points:[],color:"#aaa68d"}].concat(controller.waveformCatalog)
-        draftEnabled = controller.channelPolicies[value].rules.defeat_interaction.playback === "queue"
+        draftEnabled = savedEnabled(value)
         draft = JSON.parse(JSON.stringify(controller.storyQueues[value] || []))
         dirty = false
     }
@@ -35,10 +35,18 @@ Item {
         else loadChannel(value)
     }
     function setStep(index, field, value) { draft[index][field] = value; dirty = true }
+    function savedEnabled(value) {
+        var rule=controller.channelPolicies[value].rules.defeat_interaction
+        return rule.enabled && rule.playback === "queue"
+    }
+    function strengthValue(step) {
+        var value = step.custom_strength == null ? controller[step.tier+"Strength"] : step.custom_strength
+        return controller.outputProfile === "ovc" ? Math.floor(value/10)*10 : value
+    }
     function addStep() {
         if (draft.length >= 16) return
         var copy = JSON.parse(JSON.stringify(draft))
-        copy.push({wave:"official_tide",duration:5,tier:"low",custom_strength:null})
+        copy.push({wave:controller.outputProfile === "ovc" ? "ovc_surf_wave" : "official_tide",duration:5,tier:"low",custom_strength:null})
         draft = copy; dirty = true
     }
     function moveStep(index, offset) {
@@ -66,7 +74,7 @@ Item {
             if (!editor.dirty) {
                 var saved = JSON.stringify(editor.controller.storyQueues[editor.channel] || [])
                 if (saved !== JSON.stringify(editor.draft)) editor.loadChannel(editor.channel)
-                editor.draftEnabled = editor.controller.channelPolicies[editor.channel].rules.defeat_interaction.playback === "queue"
+                editor.draftEnabled = editor.savedEnabled(editor.channel)
             }
         }
     }
@@ -113,13 +121,13 @@ Item {
         anchors { left:parent.left; right:parent.right; top:parent.top; margins:20 }
         spacing:14
         RowLayout { Layout.fillWidth:true; spacing:10
-            Label { sourceText:"剧情 Pulse 队列"; font.pixelSize:19; font.bold:true; Layout.fillWidth:true }
+            Label { sourceText:editor.controller.outputProfile === "ovc" ? "剧情振动队列" : "剧情 Pulse 队列"; font.pixelSize:19; font.bold:true; Layout.fillWidth:true }
             Action { objectName:"storyQueueChannelA"; text:"A 通道"; primary:editor.channel==="A"; onClicked:editor.selectChannel("A") }
             Action { objectName:"storyQueueChannelB"; text:"B 通道"; primary:editor.channel==="B"; onClicked:editor.selectChannel("B") }
             Action { objectName:"saveStoryQueueQuickButton"; text:"保存并应用"; onClicked:editor.saveQueue() }
         }
         RowLayout { Layout.fillWidth:true
-            Basic.Switch { id:queueEnabled; objectName:"storyQueueEnabled"; checked:editor.draftEnabled; implicitWidth:48; implicitHeight:30; onToggled:{ editor.draftEnabled=checked; editor.dirty=true }
+            Basic.Switch { id:queueEnabled; objectName:"storyQueueEnabled"; checked:editor.draftEnabled; implicitWidth:48; implicitHeight:30; onToggled:{ if(editor.controller.setStoryQueueEnabled(editor.channel,checked)) editor.draftEnabled=checked; else editor.draftEnabled=editor.savedEnabled(editor.channel);checked=Qt.binding(function(){return editor.draftEnabled}) }
                 indicator:Rectangle { implicitWidth:44; implicitHeight:24; y:(queueEnabled.height-height)/2; radius:12; color:queueEnabled.checked ? editor.accent : "#574a36"
                     Rectangle { width:18; height:18; radius:9; anchors.verticalCenter:parent.verticalCenter; x:queueEnabled.checked ? parent.width-width-3 : 3; color:"#f3ecd9"; Behavior on x { NumberAnimation { duration:120 } } }
                 }
@@ -127,12 +135,15 @@ Item {
             Label { sourceText:"用于 " + editor.channel + " 通道的 CG 剧情循环"; font.bold:true; Layout.fillWidth:true }
             Label { sourceText:editor.dirty ? "未保存" : "已保存"; color:editor.dirty ? "#e6be73" : editor.accent }
         }
+        Label {sourceText:"开关立即保存并生效；关闭后该通道不再输出剧情波形或音频，段落修改仍需点击保存。";color:"#e6be73";font.pixelSize:11;Layout.fillWidth:true;wrapMode:Text.WordWrap}
         Label { Layout.fillWidth:true; wrapMode:Text.WordWrap; color:"#aaa68d"; font.pixelSize:11
             sourceText:(editor.controller.channelPolicies[editor.channel].story_mode || (editor.controller.channelPolicies[editor.channel].mode === "action_audio" ? "queue_audio" : "queue")).indexOf("audio") >= 0 ? "循环＋音频：波形按段循环，当前段强度 × 音频系数；静音归零但队列继续计时。只在有效剧情 / Scene 响应；须在音频共感页启用监听。" : "逐段播放，到末尾回到第 1 段；每段 0.5–30 秒，最多 16 段。暂停冻结进度，离开场景停止；死亡惩罚优先。通道 / CG 循环关闭时不输出，强度仍受破甲倍率与硬上限约束。"
         }
         Rectangle { Layout.fillWidth:true; Layout.preferredHeight:42; radius:9; color:"#142017"
             Label { objectName:"storyQueueProgress"; anchors.fill:parent; anchors.margins:10; verticalAlignment:Text.AlignVCenter; color:editor.accent; elide:Text.ElideRight
-                sourceText:!editor.status.configured ? "当前通道使用单波形循环；勾选上方开关并保存后使用队列"
+                sourceText:!editor.controller.channelPolicies[editor.channel].rules.defeat_interaction.enabled ? "剧情输出已关闭，此通道不播放剧情波形或音频。"
+                     : !editor.savedEnabled(editor.channel) ? "当前通道使用其他剧情播放方式；打开开关后改用循环队列。"
+                     : !editor.status.configured ? "队列已启用，等待有效剧情与设备输出就绪。"
                      : !editor.status.count ? "队列为空 · 不输出"
                      : !editor.status.enabled ? "队列已选择 · 当前通道或 CG 剧情循环开关关闭，不输出"
                      : (editor.status.playing ? "循环播放" : "等待 / 暂停") + " · 第 " + editor.status.index + "/" + editor.status.count + " 段 · 剩余 " + Number(editor.status.remaining).toFixed(1) + " 秒" + (editor.status.missing_wave ? " · 波形缺失，当前段静默" : "")
@@ -152,7 +163,7 @@ Item {
                         Label { sourceText:(step.index+1).toString().padStart(2,"0"); color:editor.accent; font.bold:true; Layout.preferredWidth:24 }
                         Choice { id:queueWaveChoice; objectName:"queueWave_"+step.index; Layout.fillWidth:true; Layout.minimumWidth:140; model:editor.waves; currentIndex:editor.indexOf(editor.waves,step.modelData.wave); onActivated:editor.setStep(step.index,"wave",currentValue) }
                         Choice { objectName:"queueTier_"+step.index; Layout.preferredWidth:110; model:editor.tiers; currentIndex:editor.indexOf(editor.tiers,step.strengthMode); onActivated:{ step.strengthMode=currentValue; editor.setStep(step.index,"custom_strength",currentValue==="custom" ? customStrength.value : null); if(currentValue!=="custom") editor.setStep(step.index,"tier",currentValue) } }
-                        Basic.SpinBox { id:customStrength; objectName:"queueStrength_"+step.index; visible:step.strengthMode==="custom"; Layout.preferredWidth:100; Layout.preferredHeight:38; from:0; to:100; editable:true; value:step.modelData.custom_strength == null ? editor.controller[step.modelData.tier+"Strength"] : step.modelData.custom_strength; onValueModified:editor.setStep(step.index,"custom_strength",value) }
+                        Basic.SpinBox { id:customStrength; objectName:"queueStrength_"+step.index; visible:step.strengthMode==="custom"; Layout.preferredWidth:100; Layout.preferredHeight:38; from:0; to:editor.controller.outputProfile === "ovc" ? 200 : 100; stepSize:editor.controller.outputProfile === "ovc" ? 10 : 1; editable:editor.controller.outputProfile !== "ovc"; value:editor.strengthValue(step.modelData); onValueModified:editor.setStep(step.index,"custom_strength",value) }
                         Label { visible:step.strengthMode!=="custom"; sourceText:step.strengthMode==="custom" ? "" : editor.controller[step.strengthMode+"Strength"]; color:editor.accent; Layout.preferredWidth:28 }
                         Action { text:"↑"; enabled:step.index>0; onClicked:editor.moveStep(step.index,-1) }
                         Action { text:"↓"; enabled:step.index<editor.draft.length-1; onClicked:editor.moveStep(step.index,1) }

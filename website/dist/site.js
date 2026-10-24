@@ -18,6 +18,7 @@
     });
     document.querySelectorAll('[data-release-version]').forEach(node=>{node.textContent=release.version||'—';});
     document.querySelectorAll('[data-baidu-code]').forEach(node=>{node.textContent=release.baiduCode||'—';});
+    document.querySelectorAll('.baidu-code').forEach(node=>{node.hidden=!release.baiduCode;});
     const names={baidu:{zh:'百度网盘',en:'Baidu Netdisk',ja:'百度網盤'},direct:{zh:'高速直链',en:'Direct download',ja:'直接ダウンロード'},github:{zh:'GitHub',en:'GitHub',ja:'GitHub'}};
     document.querySelectorAll('[data-download]').forEach(link=>{
       const url=release.urls?.[link.dataset.download];
@@ -59,7 +60,7 @@
     document.querySelector('nav')?.setAttribute('aria-label',choose('主导航','Main navigation','メインナビゲーション'));
     document.querySelector('.guide-nav')?.setAttribute('aria-label',choose('指南目录','Guide contents','ガイド目次'));
     document.title=isGuide?choose('连接与使用指南 · Ricca × DG-LAB','Guide · Ricca × DG-LAB','使い方 · Ricca × DG-LAB'):choose('Ricca × DG-LAB 控制中心','Ricca × DG-LAB Control Center','Ricca × DG-LAB コントロールセンター');
-    if(description) description.content=language==='zh'?originalDescription:choose('', 'Standalone Windows companion for Holy Knight Ricca and DG-LAB. Download 1.0.1, set up channels, waveform queues and global emergency stop.', 'Holy Knight Ricca と DG-LAB を同期する独立 Windows ソフト。1.0.1 のダウンロード、波形・キュー・緊急停止キーの設定方法。');
+    if(description) description.content=language==='zh'?originalDescription:choose('', 'Ricca x DG-LAB 1.1.0: V3/V4 Coyote and Opossum support, independent workbenches, manual control and adjustable HUD.', 'Ricca x DG-LAB 1.1.0：V3/V4・郊狼とオポッサム、独立設定、手動操作、カスタム HUD。');
     applyRelease();
     try {localStorage.setItem('ricca-site-language',language);} catch {}
   }

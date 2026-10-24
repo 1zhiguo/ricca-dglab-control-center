@@ -50,9 +50,11 @@ class ChannelBackendTests(unittest.TestCase):
         self.assertTrue(backend.saveStoryQueue("A", [{"wave":"tap", "duration":1, "custom_strength":12}], True))
         self.assertEqual(backend.channelPolicies["A"]["story_mode"], "queue_audio")
         self.assertTrue(backend.saveStoryQueue("A", backend.storyQueues["A"], False))
-        self.assertEqual(backend.channelPolicies["A"]["story_mode"], "fixed_audio")
+        self.assertEqual(backend.channelPolicies["A"]["story_mode"], "queue_audio")
+        self.assertFalse(backend.channelPolicies["A"]["rules"]["defeat_interaction"]["enabled"])
         restored = ProductConfig(backend._config.path).values
-        self.assertEqual(restored["channel_policies"]["A"]["story_mode"], "fixed_audio")
+        self.assertEqual(restored["channel_policies"]["A"]["story_mode"], "queue_audio")
+        self.assertFalse(restored["channel_policies"]["A"]["rules"]["defeat_interaction"]["enabled"])
         self.assertFalse(restored["audio_empathy_enabled"])
 
     def test_explicit_story_modes_are_independent_for_both_channels(self):
@@ -783,9 +785,10 @@ class ChannelBackendTests(unittest.TestCase):
         backend, _ = self.ready_device()
         backend._apply_bridge({"event": "output_timeout"})
         backend._drain()
-        self.assertTrue(backend.userOutputPaused)
+        self.assertTrue(backend.pulseRoutePaused)
+        self.assertFalse(backend.userOutputPaused)
         backend._bridge.set_auto_enabled.assert_called_with(False)
-        backend.toggleOutputPause()
+        backend.togglePulseOutput()
         backend._drain()
         backend._bridge.set_auto_enabled.assert_called_with(True)
 

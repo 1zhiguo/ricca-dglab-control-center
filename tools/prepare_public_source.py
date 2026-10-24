@@ -16,7 +16,7 @@ ROOT_FILES = (
     "run_native_debug.cmd", "build_launcher.ps1", "ricca_hp_smoke_test.py",
     "ricca_dashboard.py", "start_dashboard.cmd", "start_dashboard.ps1",
     "website/README.md", "website/check_site.py", "tools/prepare_public_source.py",
-    "tools/extract_localization.py",
+    "tools/extract_localization.py", "RELEASE_1.1.0.json",
 )
 SOURCE_DIRS = ("src", "tests", "tools", "docs", "launcher", "dashboard", ".github", "website/dist")
 SKIP_PARTS = {"__pycache__", ".git", ".openai", "node_modules", ".venv"}
@@ -53,6 +53,11 @@ def public_bytes(path: Path, relative: str) -> bytes:
     if path.suffix.lower() in BINARY_SUFFIXES:
         return data
     text = data.decode("utf-8-sig")
+    # Publish relocatable developer/test references, never workstation paths.
+    if relative.startswith(("docs/", "tests/")):
+        workspace = Path(__file__).resolve().parents[1]
+        text = text.replace(workspace.as_posix(), "<RICCA_WORKSPACE>")
+        text = text.replace(str(workspace), "<RICCA_WORKSPACE>")
     # Keep local developer convenience in the original checkout, but make the
     # published launcher relocatable and free of personal workstation paths.
     if relative == "run_native.ps1":

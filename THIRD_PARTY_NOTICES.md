@@ -9,12 +9,17 @@
 
 - 上游项目：https://github.com/dungeonlab-open/dglab-kit
 - 源文件：https://github.com/dungeonlab-open/dglab-kit/blob/main/src/waveform/coyote.ts
+- 负鼠专用波形源文件：https://github.com/dungeonlab-open/dglab-kit/blob/main/src/waveform/ovc.ts
 - 上游许可证：GNU General Public License v3.0
 - 许可证全文：https://github.com/dungeonlab-open/dglab-kit/blob/main/LICENSE
 
 Ricca 共感预设、中文名称、事件用途、强度档位和安全上限是本项目的独立设计，
 不是上游官方推荐。保留上游作者权利及 GPL-3.0 许可；许可证全文随本项目的
 `LICENSE` 一同提供。使用与再分发须遵守适用的 GPL 条款。
+
+`src/ricca_dglab/ovc.py` 中的五组负鼠振动波形使用上述 `ovc.ts` 的原始帧数据，
+以振幅序列紧凑表示；未改动帧顺序或字节值。负鼠强度、游戏事件映射和剧情队列
+是独立设置，不继承郊狼电刺激配置，也不代表 DG-LAB 官方的安全或体感建议。
 
 ## PySide6 / Qt
 

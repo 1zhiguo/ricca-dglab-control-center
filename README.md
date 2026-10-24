@@ -10,16 +10,18 @@ Reads game state externally: **no BepInEx, DLL injection, game-file changes or m
 - HP damage, hit reactions, armor break, sustained capture/struggle and death feedback.
 - Independent A/B combat and story/gallery strategies: fixed wave, playlist, audio, or combined modes.
 - Official waveform presets, a custom waveform editor, live monitors and an in-game HUD.
-- DG-LAB Socket QR pairing, network-adapter selection and connection diagnostics.
+- DG-LAB V3/V4 Socket pairing; Coyote electrical output and independent Opossum vibration can run together.
+- Separate Opossum presets, intensity and playlists; unified device workbenches and a dedicated manual-control page.
+- Adjustable HUD size, position and displayed devices; network-adapter selection and connection diagnostics.
 - Chinese, English and Japanese UI. Global emergency stop: **Ctrl+F12** by default, with press-to-record and single-key support.
 
 ## Quick start
 
 1. Get the Windows ZIP from the [website](https://ricca-dglab.web.app/#downloads) when a download link is available. Extract the **entire folder**, then run `Ricca-x-DGlab.exe`. No Python installation needed.
 2. Complete the tutorial and manually set a conservative safety cap.
-3. Start a supported game build. Connect the phone and PC to the same LAN, then scan the QR code using DG-LAB 3.0 App's Socket mode.
+3. Start a supported game build. Connect the phone and PC to the same LAN. Choose V3 or V4 and scan using the matching DG-LAB App's Socket mode. For V4, confirm each selected device, its accessory/mute state and cap, then explicitly enable its output.
 
-Once paired, valid game state drives output automatically. Pause first if you do not want immediate output.
+Once enabled, valid game state drives output. V4 discovery/automatic selection never authorizes output by itself. Manual mode works without game detection, but retains hardware checks, caps and emergency stop.
 
 **Emergency stop zeros and locks both channels; pressing again does not resume.**
 Death feedback can override ordinary pauses. Resume manually only when ready.
@@ -35,7 +37,7 @@ Game updates, mods or different binaries may invalidate detection.
 - [Run from source and contribute](CONTRIBUTING.md)
 - [Build and publish](RELEASING.md) · [Safety reporting](SECURITY.md)
 
-Current source version: **1.0.1**. Download mirrors are added separately; GitHub's automatic “Source code” ZIP is not the Windows app.
+Current source version: **1.1.0**. [V4 and Opossum setup](docs/V4_TESTING.zh-CN.md). Download mirrors are added separately; GitHub's automatic “Source code” ZIP is not the Windows app.
 
 ## License
 
