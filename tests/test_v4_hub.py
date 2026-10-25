@@ -503,10 +503,18 @@ class V4HubTests(unittest.IsolatedAsyncioTestCase):
             await self.select("ovc")
             await self.arm(legacy, 6)
             await self.arm(self.ovc, 10)
-            for _ in range(3):
+            def both_streams_received():
+                # Keep simulated telemetry fresh while waiting for observed
+                # output, rather than assuming three sleeps yield three frames
+                # on a shared Windows CI runner. The bounded wait still fails
+                # if either transport stops delivering the expected messages.
                 self.update(legacy, 6)
                 self.update(self.ovc, 10)
-                await asyncio.sleep(.1)
+                return (len(self.nonzero("ovc")) >= 3
+                        and any(item.get("message", "").startswith("pulse-A:") for item in received)
+                        and any(item.get("message") == "strength-1+2+6" for item in received))
+
+            await self.until(both_streams_received)
             self.assertTrue(any(item.get("message", "").startswith("pulse-A:") for item in received))
             self.assertTrue(any(item.get("message") == "strength-1+2+6" for item in received))
             self.assertGreaterEqual(len(self.nonzero("ovc")), 3)

@@ -131,7 +131,7 @@
     "tests/test_v4_auto_selection.py": "53cc8d14cfa396346926d9aeb701a4c4f3feaa3955f3ff4cd6508e38899c3a4e",
     "tests/test_v4_backend.py": "7d914854784c8488963a38220505a744fe20e14112f1df5eec0849fe4702e064",
     "tests/test_v4_bridge.py": "c3f46efdbfc7c5c5568972c653ec605d8befe8de58dec7c45ebf6bdd960332c0",
-    "tests/test_v4_hub.py": "b7be55f4796506964ed9ab9f74eac1bc747b7a809ce19bf6b402e7ea36b3cff7",
+    "tests/test_v4_hub.py": "391de9ccd30ee032bc5cbd9724332b5d4937494c4f7f1321ece48bd65b98995f",
     "tests/test_v4_safety_review.py": "7be6ead4ca02dddafb253e7d978144435d7da403d4db2e750f99ebceba3c0eb2",
     "tests/test_workbench_display_state.py": "852aeb39d0fb14523ea0e5b0dcd48d41cb4905e6652891008369585a3638e30a",
     "tests/verify_capture_ui.py": "87826ba4368c643c6026651853719a37abcb58eeca0530253a1eba1840a7593c",
