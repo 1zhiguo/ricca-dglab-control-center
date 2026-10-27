@@ -15,15 +15,15 @@ ROOT_FILES = (
     "requirements-native.txt", "setup_native.ps1", "run_native.ps1", "run_native.cmd",
     "run_native_debug.cmd", "build_launcher.ps1", "ricca_hp_smoke_test.py",
     "ricca_dashboard.py", "start_dashboard.cmd", "start_dashboard.ps1",
-    "website/README.md", "website/check_site.py", "tools/prepare_public_source.py",
+    "website/README.md", "website/FOREST_THEME.md", "website/check_site.py", "tools/prepare_public_source.py",
     "tools/extract_localization.py", "RELEASE_1.1.0.json",
 )
 SOURCE_DIRS = ("src", "tests", "tools", "docs", "launcher", "dashboard", ".github", "website/dist")
 SKIP_PARTS = {"__pycache__", ".git", ".openai", "node_modules", ".venv"}
-ALLOWED_SUFFIXES = {".py", ".qml", ".png", ".jpg", ".jpeg", ".svg", ".ico",
+ALLOWED_SUFFIXES = {".py", ".qml", ".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico",
                     ".cs", ".html", ".css", ".js", ".json", ".md", ".txt",
                     ".ps1", ".cmd", ".yml", ".yaml"}
-BINARY_SUFFIXES = {".png", ".jpg", ".jpeg", ".ico"}
+BINARY_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".ico"}
 SENSITIVE = (
     r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----",
     r'"private_key"\s*:\s*"',

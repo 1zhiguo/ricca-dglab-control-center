@@ -1,5 +1,6 @@
 // Shared Japanese copy for the landing page and guide. Keys match data-en.
 window.RICCA_JA = Object.freeze({
+  "Standalone Windows x64 ZIP, version 1.1.0. Choose V3 or V4 in Device & Game. Verify devices and caps before explicitly enabling V4 output.": "独立 Windows x64 ZIP・1.1.0。「デバイスとゲーム」で V3／V4 を選択し、V4 はデバイスの状態とハード上限を確認して手動で有効化してください。",
   "Windows x64 portable ZIP · 1.1.0 · Chinese / English / Japanese UI": "Windows x64 ポータブル ZIP · 1.1.0 · 中国語／英語／日本語 UI",
   "Sync HP damage, hit reactions and story scenes with Coyote and Opossum. V3/V4 support, independent electrical and vibration settings, and manual control. Standalone Windows app: no injection or game-memory writes. The game is not included.": "HP ダメージ・被弾動作・シナリオを郊狼とオポッサムに同期。V3/V4、電気刺激と振動の個別設定、手動操作に対応。注入やゲームメモリーへの書き込みを行わない独立 Windows ソフトです。ゲーム本体は含みません。",
   "V3 / V4 dual-device connection": "V3／V4・2 台同時接続",

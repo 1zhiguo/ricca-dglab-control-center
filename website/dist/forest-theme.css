@@ -1,0 +1,101 @@
+/* Ricca's woodland field journal. Presentation only; no download/output logic. */
+:root{color-scheme:dark;--bg:#08120e;--panel:#122119;--panel2:#1e2c1d;--line:#8a774644;--text:#f3eedc;--muted:#b2bea7;--cyan:#c7dca2;--pink:#d9b47c;--violet:#a4c6ad;--yellow:#e6c983;--forest-gold:#d7bd79;--forest-wood:#382d1b;--shell:min(1180px,calc(100% - 64px))}
+body.ricca-forest{background:#08120e;color:var(--text);isolation:isolate}
+.ricca-forest::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:linear-gradient(180deg,#06110dab,#08120ee8 80%),url('assets/ricca-enchanted-forest.webp') center top/cover no-repeat}
+.ricca-forest::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 0 30%,#6d8a2d12,transparent 45%),radial-gradient(ellipse at 100% 70%,#84713910,transparent 40%)}
+.ricca-forest :focus-visible{outline-color:#ead391;outline-offset:5px}
+.ricca-forest .header.product-header{position:relative}
+.ricca-forest .product-header .header-top{border-color:#b59a5d44}
+.ricca-forest .product-header .header-bottom{border-color:#b59a5d38;padding-block:22px}
+.ricca-forest .brand{color:#eee4c4;letter-spacing:.12em}
+.ricca-forest .product-header .dashboard-back{border-color:#9e8b565e;background:linear-gradient(130deg,#303321,#15261c);color:#e5d7a7;box-shadow:inset 0 1px #dcca8a14,0 6px 22px #0003;border-radius:6px 15px 6px 15px}
+.ricca-forest .product-header .dashboard-back:hover{border-color:#e1c988;box-shadow:0 0 25px #d2bc6425;transform:translateY(-2px)}
+.ricca-forest .product-header .github-link,.ricca-forest .header .language{background:#15241cee;border:1px solid #a48d534f;color:#e4dfc9;border-radius:7px}
+.ricca-forest .header .language option{background:#132219;color:#f3eedc}
+.ricca-forest nav{color:#bcc8ad}
+.ricca-forest nav a:hover{color:#f2d99c}
+.ricca-forest.manaka-home .hero{position:relative;isolation:isolate;grid-template-columns:minmax(0,1fr) 300px;gap:34px;margin-top:30px;margin-bottom:24px;padding:52px;min-height:650px;border:1px solid #cbb4776b;border-radius:5px 34px 5px 34px;background:linear-gradient(90deg,#071810ed 0%,#0a1c15da 38%,#0b221a55 76%,#07150e44),url('assets/ricca-enchanted-forest.webp') center/cover no-repeat;box-shadow:0 24px 70px #0005,inset 0 0 0 6px #a9975b0c}
+.ricca-forest .hero::before{content:"";position:absolute;inset:10px;border:1px solid #cdb77732;border-radius:2px 24px 2px 24px;pointer-events:none;z-index:-1}
+.ricca-forest .hero::after{content:"";position:absolute;inset:18% 7% 14% 62%;z-index:-1;pointer-events:none;background:radial-gradient(circle at 16% 80%,#e5d98d 0 1px,transparent 3px),radial-gradient(circle at 68% 12%,#d9eaa9 0 1px,transparent 3px),radial-gradient(circle at 95% 65%,#e8d798 0 1px,transparent 3px),radial-gradient(circle at 40% 30%,#d9eaa9 0 1px,transparent 3px);animation:forest-motes 7s ease-in-out infinite alternate}
+@keyframes forest-motes{from{opacity:.3;transform:translateY(6px)}to{opacity:.9;transform:translateY(-9px)}}
+.ricca-forest.manaka-home .compatibility{background:#112b1eae;border:1px solid #b8aa6d66;color:#d4dfb5;border-radius:3px 12px 3px 12px;font-size:11px;font-weight:600;letter-spacing:.035em;margin:0;align-self:start;padding:9px 13px;backdrop-filter:blur(5px)}
+.ricca-forest.manaka-home .label{color:#ddc48b;font-size:11px;letter-spacing:.16em;line-height:1.8;margin-bottom:20px}
+.ricca-forest.manaka-home h1{font-family:Georgia,'Noto Serif SC','Noto Serif JP','Songti SC',SimSun,serif;font-size:clamp(42px,5.2vw,66px);line-height:1.17;font-weight:600;letter-spacing:-.035em;color:#f6edd2;text-shadow:0 2px 25px #0009}
+.ricca-forest.manaka-home .lead{color:#d0d8c0;font-size:16px;line-height:1.95;max-width:610px;margin-top:22px;text-shadow:0 2px 8px #0009}
+.ricca-forest.manaka-home .meta{color:#bcc8a6;font-size:11px;line-height:1.8}
+.ricca-forest .hero-brand-lockup{position:relative;justify-content:center;align-items:center;gap:17px;width:300px;min-height:300px;padding:25px 12px;align-self:center;background:radial-gradient(circle,#112b1c88 20%,#112b1c22 60%,transparent 70%)}
+.ricca-forest .hero-brand-lockup::before,.ricca-forest .hero-brand-lockup::after{content:"";position:absolute;inset:5px;border:1px solid #d5c07c7a;border-radius:50%;pointer-events:none;box-shadow:0 0 35px #bfcf7020}
+.ricca-forest .hero-brand-lockup::after{inset:17px;border-style:dashed;border-color:#d4c88744;transform:rotate(25deg);box-shadow:none}
+.ricca-forest .hero-brand-lockup img{width:104px;height:104px;flex:0 0 104px;border:0;border-radius:24%;background:transparent;box-shadow:0 12px 30px #0007}
+.ricca-forest .hero-brand-lockup>span{color:#e1cf92;font-size:25px}
+.ricca-forest.manaka-home .button{border-radius:4px 11px 4px 11px;transition:background .2s,transform .2s,box-shadow .2s,border-color .2s}
+.ricca-forest.manaka-home .primary,.ricca-forest.manaka-home .download-trigger{color:#1c2514;background:linear-gradient(135deg,#f0dfa4,#c6b16a);border:1px solid #f0dda0;box-shadow:inset 0 1px #fff8,0 7px 20px #0003}
+.ricca-forest.manaka-home .primary:hover,.ricca-forest.manaka-home .download-trigger:hover{background:linear-gradient(135deg,#fff0bd,#ddc781);box-shadow:0 0 24px #d6bf6d30;transform:translateY(-2px)}
+.ricca-forest.manaka-home .actions .quick-start-trigger{background:#143824;border:1px solid #9dba7780;color:#e0edc7;box-shadow:inset 0 1px #b4d88e12}
+.ricca-forest.manaka-home .actions .quick-start-trigger:hover{background:#244d32;border-color:#d3dca6;transform:translateY(-2px)}
+.ricca-forest .download-source-menu{background:#101f15fc;border-color:#ad965f80;box-shadow:0 24px 50px #0008;border-radius:4px 13px 4px 13px}
+.ricca-forest .download-source-menu a[href]{color:#ecd59b}
+.ricca-forest .download-source-menu a[href]:hover{background:#29402a}
+.ricca-forest.manaka-home .section{position:relative;border-top:0;padding:66px 0}
+.ricca-forest.manaka-home .section+.section::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,#b9a16866,transparent)}
+.ricca-forest h2,.ricca-forest .guide-hero h1{font-family:Georgia,'Noto Serif SC','Noto Serif JP','Songti SC',SimSun,serif;color:#efe4c3;letter-spacing:.015em;font-weight:600}
+.ricca-forest.manaka-home h2{font-size:30px}
+.ricca-forest .section-title h2::before,.ricca-forest #features>h2::before{content:"✧";display:inline-block;color:#cfb679;font-size:26px;margin-right:12px;vertical-align:1px}
+.ricca-forest .features{border:0;gap:12px 18px;counter-reset:feature}
+.ricca-forest .features article:nth-child(n){position:relative;counter-increment:feature;display:block;padding:23px 24px 22px 52px;min-width:0;border:1px solid #95814e42;border-radius:3px 14px 3px 14px;background:linear-gradient(115deg,#1b2e1ce8,#102017eb);box-shadow:inset 0 1px #d7cc9010;transition:border-color .2s,background .2s}
+.ricca-forest .features article::before{content:counter(feature,decimal-leading-zero);position:absolute;left:18px;top:25px;color:#c7b174;font:11px Georgia,serif}
+.ricca-forest .features article:hover{border-color:#c5b57485;background:#1e3321}
+.ricca-forest .features strong{display:block;font-size:15px;line-height:1.6;color:#e9e5c8}
+.ricca-forest .features span{display:block;text-align:left;font-size:12px;line-height:1.9;color:#b9c6aa;margin-top:7px}
+.ricca-forest .feature-note{padding:16px 20px;border-left:2px solid #a48d54;background:#122218b8;color:#bac5ac;border-radius:0 8px 8px 0}
+.ricca-forest.manaka-home .download-card,.ricca-forest.manaka-home .download-card.primary-channel{position:relative;border:1px solid #af975b70;border-radius:4px 18px 4px 18px;background:repeating-linear-gradient(0deg,#c6a36503 0 1px,transparent 1px 7px),linear-gradient(140deg,#2a2b1ce8,#101f16f5 75%);box-shadow:inset 0 0 0 5px #b2985010,0 12px 28px #0002}
+.ricca-forest.manaka-home .download-card.primary-channel{border-color:#e2c78599;background:linear-gradient(140deg,#3c3822ec,#15291bf2 80%)}
+.ricca-forest .channel-head strong{font-family:Georgia,'Noto Serif SC',SimSun,serif;color:#efe1b9}
+.ricca-forest .channel-head em{color:#c4cead;border-color:#a4935b50;background:#10231660}
+.ricca-forest .channel-dot,.ricca-forest .channel-dot.baidu,.ricca-forest .channel-dot.github{background:#dfc680;box-shadow:0 0 14px #e7ce7f66}
+.ricca-forest.manaka-home .download-card p{color:#c0c8ae;font-size:13px}
+.ricca-forest.manaka-home .release-link{background:linear-gradient(120deg,#23402a,#243222);border-color:#b19c6075;color:#ede2b8}
+.ricca-forest.manaka-home .release-link:hover{border-color:#e8d194;background:#354a2a;box-shadow:0 0 18px #d8ca8120}
+.ricca-forest .checksum{background:#101d14de;border-color:#a890534b;border-radius:5px 12px 5px 12px;color:#bac5ab}
+.ricca-forest .checksum code,.ricca-forest .baidu-code code{background:#09150d;border-color:#8e824f66;color:#e2c78b}
+.ricca-forest .baidu-code{color:#bcc6ab}
+.ricca-forest .baidu-code[hidden]{display:none}
+.ricca-forest .code-copy{background:#26351f;border-color:#8f804e;color:#ded9b7}
+.ricca-forest .release-resources{color:#d7c58f}
+.ricca-forest .screens{grid-template-columns:repeat(2,minmax(0,1fr));gap:28px}
+.ricca-forest .screens figure{padding:10px;background:linear-gradient(140deg,#25311ee5,#102018f5);border:1px solid #9e8c5466;border-radius:4px 18px 4px 18px;box-shadow:0 15px 32px #0003}
+.ricca-forest .screens figure>a{overflow:hidden;border-radius:2px 10px 2px 10px}
+.ricca-forest .screens img{border-color:#bac77b2b;border-radius:2px 10px 2px 10px;transition:transform .35s}
+.ricca-forest .screens figure>a:hover img{transform:scale(1.025)}
+.ricca-forest .screens figcaption{padding:6px 7px 2px;color:#c6d0b1;font-size:12px}
+.ricca-forest .original-info{background:linear-gradient(130deg,#242b1be8,#102119e8);border-color:#9a87544d;border-radius:4px 16px 4px 16px}
+.ricca-forest .original-info p,.ricca-forest .original-info dt{color:#b8c4a9}
+.ricca-forest .original-info dd{color:#eee4c6}
+.ricca-forest .social-profile-card{background:linear-gradient(120deg,#302c1de8,#152b1fe8);border-color:#b19c5b69;border-radius:4px 18px 4px 18px;box-shadow:inset 0 1px #dbc68b17}
+.ricca-forest .social-avatar{border-color:#d4bd7b8a}
+.ricca-forest .social-profile-card::after{background:radial-gradient(circle,#cfbd6b20,transparent 68%)}
+.ricca-forest .social-follow-button:hover{box-shadow:0 12px 30px #b1c07920}
+.ricca-forest .social-kicker,.ricca-forest .social-profile-copy strong{color:#e0c38b}
+.ricca-forest .social-profile-copy p{color:#c2c8ae}
+.ricca-forest .social-follow-button{background:#ded0a4;border-color:#eadbb5;color:#142219;border-radius:5px 12px 5px 12px}
+.ricca-forest .support-grid article{background:#142219e8;border-color:#a48f544f;border-radius:4px 16px 4px 16px}
+.ricca-forest .support-grid p{color:#bec9ad}
+.ricca-forest .footer{border-top-color:#a68f504d;color:#b3c0a6}
+.ricca-forest .footer p{color:#aebda2}
+.ricca-forest .quick-start,.ricca-forest .lightbox{background:linear-gradient(135deg,#26311e,#0e2117);border:1px solid #c6ae72;border-radius:4px 20px 4px 20px;box-shadow:0 30px 100px #000b}
+.ricca-forest .quick-start::backdrop,.ricca-forest .lightbox::backdrop{background:#030c08dc;backdrop-filter:blur(4px)}
+.ricca-forest .quick-steps>li>span{background:#c9b575;color:#142015}
+.ricca-forest .quick-steps p,.ricca-forest .quick-start-note{color:#bdc9ad}
+.ricca-forest .guide-hero{padding-top:64px}
+.ricca-forest .guide-hero .lead{color:#c1ccb2}
+.ricca-forest .guide-nav{background:#142319db;border:1px solid #9f8a4a55;border-radius:4px 16px 4px 16px;padding:22px 20px;color:#d3d9b9;gap:20px}
+.ricca-forest .guide-content section{background:#102117e8;border:1px solid #9a864647;border-radius:4px 16px 4px 16px;padding:30px;margin-bottom:20px}
+.ricca-forest .guide-content p,.ricca-forest .guide-content li{color:#c5cfb5}
+.ricca-forest .guide-content code:not(.hash),.ricca-forest .hash{color:#e2c888;background:#0d1910;border-color:#ad97534d}
+.ricca-forest .note{background:#1c3222;border-color:#a7bd6c70;color:#d7e0bd!important}
+.ricca-forest .warning{background:#332b18;border-color:#c2a56875;color:#e9d3a2!important}
+.ricca-forest .analytics-dialog,.ricca-forest .analytics-settings{background:#102518;border-color:#a79055}
+@media(min-width:1440px){.ricca-forest.manaka-home .hero{min-height:690px}}
+@media(max-width:1050px){.ricca-forest.manaka-home .hero{grid-template-columns:minmax(0,1fr) 240px;padding:40px;gap:22px}.ricca-forest .hero-brand-lockup{width:240px;min-height:240px;gap:12px}.ricca-forest .hero-brand-lockup img{width:82px;height:82px;flex-basis:82px}}
+@media(max-width:760px){:root{--shell:calc(100% - 32px)}.ricca-forest::before{background-position:68% top}.ricca-forest.manaka-home .hero{grid-template-columns:1fr;min-height:0;padding:28px 24px 35px;gap:28px;margin-top:18px;background-position:62% center;background-image:linear-gradient(90deg,#071810e8,#091e16ba),url('assets/ricca-enchanted-forest.webp')}.ricca-forest.manaka-home .compatibility{font-size:10px;max-width:100%;line-height:1.6}.ricca-forest.manaka-home h1{font-size:clamp(34px,7.5vw,50px)}.ricca-forest.manaka-home .lead{font-size:14px;line-height:1.9}.ricca-forest .hero-brand-lockup{justify-self:center;min-height:200px;width:200px;gap:10px}.ricca-forest .hero-brand-lockup img{width:69px;height:69px;flex-basis:69px}.ricca-forest .hero-brand-lockup>span{font-size:20px}.ricca-forest .hero::after{inset:40% 5% 5% 35%}.ricca-forest.manaka-home .section{padding:44px 0}.ricca-forest .features{grid-template-columns:1fr;gap:10px}.ricca-forest .features article:nth-child(n){padding:18px 18px 18px 45px}.ricca-forest .features article::before{left:15px;top:21px}.ricca-forest .features span{font-size:12px}.ricca-forest .screens{grid-template-columns:1fr;gap:20px}.ricca-forest .guide-nav{position:static;margin-bottom:22px}.ricca-forest .guide-content section{padding:22px}.ricca-forest .section-title h2::before,.ricca-forest #features>h2::before{font-size:23px;margin-right:8px}.ricca-forest.manaka-home h2{font-size:26px}}
+@media(prefers-reduced-motion:reduce){.ricca-forest .hero::after{animation:none}.ricca-forest *{scroll-behavior:auto!important;transition:none!important}}

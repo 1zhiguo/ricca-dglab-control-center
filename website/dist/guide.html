@@ -1,21 +1,21 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090d13">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1e13">
 <meta name="description" content="Ricca × DG-LAB 使用指南：自动连接输出、死亡优先级、破甲增幅、通道波形与安全停止。">
 <title>连接与使用指南 · Ricca × DG-LAB</title>
 <link rel="icon" href="assets/ricca-icon-rounded.svg"><link rel="stylesheet" href="styles.css?v=rounded-icon-2">
-<script src="release-config.js?v=1.1.0-mirrors1" defer></script><script src="i18n-ja.js?v=1.1.0-mirrors1" defer></script><script src="site.js?v=1.1.0" defer></script>
+<script src="release-config.js?v=1.1.0-mirrors1" defer></script><script src="i18n-ja.js?v=20261028.1" defer></script><script src="site.js?v=1.1.0" defer></script>
 <link rel="stylesheet" href="analytics.css?v=1"><script src="analytics.js?v=1" data-measurement-id="G-3JZLXPP17E" data-analytics-host="ricca-dglab.web.app" defer></script>
-<link rel="stylesheet" href="dashboard-link.css?v=20261020.1"><link rel="stylesheet" href="localization.css?v=1.0.1-ja"><link rel="stylesheet" href="support.css?v=1"><link rel="stylesheet" href="product-header.css?v=20261021.1"></head>
-<body>
+<link rel="stylesheet" href="dashboard-link.css?v=20261020.1"><link rel="stylesheet" href="localization.css?v=1.0.1-ja"><link rel="stylesheet" href="support.css?v=1"><link rel="stylesheet" href="product-header.css?v=20261021.1"><link rel="stylesheet" href="forest-theme.css?v=20261028.1"></head>
+<body class="ricca-forest">
 <a class="skip" href="#main" data-en="Skip to content">跳到正文</a>
 <header class="header product-header shell">
   <div class="header-top"><a class="dashboard-back" href="https://dglab-x-game.web.app/"><span aria-hidden="true">←</span><span data-en="Back to Dashboard">返回 Dashboard</span></a><div class="header-tools"><a class="github-link" href="https://github.com/1zhiguo/ricca-dglab-control-center" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository"><svg aria-hidden="true" viewBox="0 0 24 24"><path fill="currentColor" d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2.23c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.78 1.2 1.78 1.2 1.04 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.74-1.55-2.57-.29-5.27-1.28-5.27-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.16 1.18a10.98 10.98 0 0 1 5.76 0c2.19-1.49 3.16-1.18 3.16-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.42-2.71 5.39-5.29 5.68.42.36.79 1.06.79 2.14v3.17c0 .31.21.68.8.56A11.5 11.5 0 0 0 12 .7Z"/></svg><span>GitHub</span></a><select class="language" aria-label="Language / 语言 / 言語"><option value="zh">中文</option><option value="en">English</option><option value="ja">日本語</option></select></div></div>
   <div class="header-bottom"><a class="brand" href="index.html"><img src="assets/ricca-icon-rounded.svg" alt="" width="38" height="38"><span>RICCA <i>×</i> DG-LAB</span></a><nav aria-label="Main navigation"><a href="index.html#features" data-en="Features">功能</a><a href="index.html#screens" data-en="Interface">界面</a><a href="index.html#downloads" data-en="Download">下载</a><a href="index.html" data-en="Home ↗">返回首页 ↗</a></nav></div>
 </header>
 <main class="shell" id="main">
-<div class="guide-hero"><p class="eyebrow">RICCA × DG-LAB / FIELD GUIDE</p><h1 data-en="Set your limits.<br>Connect, then verify.">先设上限，<br>再连接并核对。</h1><p class="lead" data-en="Standalone Windows x64 ZIP, version 1.0.1. After onboarding and a positive saved hard cap, connecting enables output in valid game states.">1.0.1 独立 Windows x64 ZIP。完成教程并保存大于 0 的硬上限后，连接即按有效游戏状态自动输出。</p><p class="note warning" data-en="Emergency stop: Ctrl+F12, customizable in Intensity Range. It zeros and latches all output, never toggles resume. Software limits cannot guarantee physical safety.">全局急停 Ctrl+F12，可在个性化范围自定义。按下归零并锁定全部输出，不切换恢复。软件上限不保证物理安全。</p></div>
+<div class="guide-hero"><p class="eyebrow">RICCA × DG-LAB / FIELD GUIDE</p><h1 data-en="Set your limits.<br>Connect, then verify.">先设上限，<br>再连接并核对。</h1><p class="lead" data-en="Standalone Windows x64 ZIP, version 1.1.0. Choose V3 or V4 in Device & Game. Verify devices and caps before explicitly enabling V4 output.">1.1.0 独立 Windows x64 ZIP。在“设备与游戏”选择 V3／V4；V4 核对设备状态和硬上限后，手动启用对应设备输出。</p><p class="note warning" data-en="Emergency stop: Ctrl+F12, customizable in Intensity Range. It zeros and latches all output, never toggles resume. Software limits cannot guarantee physical safety.">全局急停 Ctrl+F12，可在个性化范围自定义。按下归零并锁定全部输出，不切换恢复。软件上限不保证物理安全。</p></div>
 <div class="guide-layout"><aside class="guide-nav" aria-label="Guide contents"><a href="#requirements" data-en="01 · Requirements">01 · 开始前准备</a><a href="#connection" data-en="02 · Connection">02 · 扫码连接</a><a href="#safety" data-en="03 · First test">03 · 首次测试</a><a href="#hotkey" data-en="Emergency hotkey">全局急停键</a><a href="#channels" data-en="04 · Channel rules">04 · 通道与波形</a><a href="#audio" data-en="05 · Audio & CG">05 · 音频与 CG</a><a href="#troubleshooting" data-en="06 · Troubleshooting">06 · 常见问题</a><a href="#settings" data-en="07 · Your settings">07 · 配置保存</a></aside>
 <div class="guide-content">
 <section id="requirements"><h2 data-en="01 / Before you start">01 / 开始前准备</h2><ul>

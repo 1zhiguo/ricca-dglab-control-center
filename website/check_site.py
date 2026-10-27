@@ -46,6 +46,7 @@ for name, page in pages.items():
     nav = header[header.index("<nav"):header.index("</nav>")]
     assert 'class="github-link"' not in nav and 'class="language"' not in nav
     assert 'https://dglab-x-game.web.app/' in header
+    assert 'forest-theme.css?v=20261028.1' in markup and 'ricca-forest' in markup
     assert 'data-measurement-id="G-3JZLXPP17E"' in markup
     assert 'data-analytics-host="ricca-dglab.web.app"' in markup
     assert 'analytics.css?v=1' in markup and 'analytics.js?v=1' in markup
@@ -62,6 +63,11 @@ for name, page in pages.items():
             assert url.fragment in pages[target.name].ids, (name, "broken fragment", reference)
 for screen in ("overview", "devices", "strategy", "ovc", "manual", "story"):
     assert (DIST / "assets" / "screens" / f"{screen}.png").stat().st_size > 1000
+forest = DIST / "assets/ricca-enchanted-forest.webp"
+assert forest.is_file() and 1000 < forest.stat().st_size < 900000
+theme = (DIST / "forest-theme.css").read_text(encoding="utf-8")
+assert "assets/ricca-enchanted-forest.webp" in theme
+assert "prefers-reduced-motion:reduce" in theme
 manifest_path = ROOT / ".openai/hosting.json"
 if manifest_path.exists():
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
